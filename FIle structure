@@ -1,0 +1,86 @@
+chat-app/
+│
+├── backend/                         # Node.js backend
+│   ├── controllers/                 # Logic for routes
+│   │   ├── authController.js
+│   │   ├── chatController.js
+│   │   └── messageController.js
+│
+│   ├── models/                      # Mongoose models
+│   │   ├── User.js
+│   │   ├── Chat.js
+│   │   └── Message.js
+│
+│   ├── routes/                      # Express routes
+│   │   ├── authRoutes.js
+│   │   ├── chatRoutes.js
+│   │   └── messageRoutes.js
+│
+│   ├── middleware/                  # Middleware (e.g., JWT auth)
+│   │   ├── authMiddleware.js
+│   │   └── errorHandler.js
+│
+│   ├── socket/                      # Socket.IO logic
+│   │   └── socketHandler.js
+│
+│   ├── config/                      # DB & environment config
+│   │   ├── db.js
+│   │   └── dotenv.js
+│
+│   ├── utils/                       # Utility functions
+│   │   └── generateToken.js
+│
+│   ├── server.js                    # Main entry point
+│   └── .env                         # Environment variables
+│
+│
+├── frontend/                        # React frontend
+│   ├── public/
+│   │   ├── index.html
+│   │   ├── favicon.ico
+│   │   └── manifest.json
+│
+│   ├── src/
+│   │   ├── components/              # Reusable UI components
+│   │   │   ├── ChatBubble.js
+│   │   │   ├── ChatInput.js
+│   │   │   ├── ChatList.js
+│   │   │   ├── Navbar.js
+│   │   │   ├── Sidebar.js
+│   │   │   └── Avatar.js
+│   │
+│   │   ├── pages/                   # Page components
+│   │   │   ├── Login.js
+│   │   │   ├── Signup.js
+│   │   │   ├── Chat.js
+│   │   │   ├── Profile.js
+│   │   │   └── Settings.js
+│   │
+│   │   ├── context/                 # Context for global state
+│   │   │   ├── AuthContext.js
+│   │   │   └── ChatContext.js
+│   │
+│   │   ├── hooks/                   # Custom React hooks
+│   │   │   ├── useAuth.js
+│   │   │   ├── useChat.js
+│   │   │   └── useSocket.js
+│   │
+│   │   ├── services/                # API requests
+│   │   │   ├── authService.js
+│   │   │   ├── chatService.js
+│   │   │   └── messageService.js
+│   │
+│   │   ├── assets/                  # Static assets
+│   │   │   └── logo.png
+│   │
+│   │   ├── App.js
+│   │   ├── index.js
+│   │   └── tailwind.config.js
+│
+│   ├── .env                         # API base URL
+│   ├── package.json                 # React dependencies
+│
+│
+├── README.md
+├── .gitignore
+└── package.json                    # Optional root package.json (for monorepo)
