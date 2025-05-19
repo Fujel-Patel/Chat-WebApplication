@@ -9,7 +9,6 @@ import SignUpPage from "./pages/SignUpPage";
 import LoginPage from "./pages/Loginpage";
 import SettingsPage from "./pages/SettingsPage";
 import ProfilePage from "./pages/ProfilePage";
-
 import { useAuthStore } from "./store/useAuthStore";
 import { useThemeStore } from "./store/useThemeStore";
 
