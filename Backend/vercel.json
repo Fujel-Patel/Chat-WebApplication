@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "index.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/index.js"
+    }
+  ],
+  "env": {
+    "MONGODB_URI": "mongodb+srv://fujelpatel6013:jbN1rHaVegacX08j@fujel06.raqsi.mongodb.net/",
+    "JWT_SECRET": "73d462f4f7cd88afd957f469db03a51a4751b972408d6954ad4686b2f6dc0011bb00a0be4841c751e08931563a0f3f3f380766bbddc33ff9b0f4df96aef11d97"
+  }
+}
