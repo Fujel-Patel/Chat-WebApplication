@@ -2,14 +2,13 @@ import express from "express";
 import 'dotenv/config';
 import cookieParser from "cookie-parser";
 import cors from "cors"
-
+import http from "http"; // Import the http module
 import path from "path"
 
-import { connectDB } from "./lib/db.js"; 
-
+import { connectDB } from "./lib/db.js";
+import { io, app } from "./lib/socket.js"; // Import io and the app
 import authRoutes from "./routes/auth.route.js";
 import messageRoutes from "./routes/message.route.js";
-import { app, server } from "./lib/socket.js";
 
 const PORT = process.env.PORT || 5000;
 const __dirname = path.resolve();
@@ -17,7 +16,7 @@ const __dirname = path.resolve();
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-app.use(cookieParser()); 
+app.use(cookieParser());
 app.use(cors({
   origin: "http://localhost:5173/", // your frontend port
   credentials: true,
@@ -37,6 +36,8 @@ if (process.env.NODE_ENV === "production") {
 connectDB()
   .then(() => {
     console.log("Database Connected Successfully");
+    const server = http.createServer(app); // Create the HTTP server here
+    io.attach(server); // Attach Socket.IO to this server
     server.listen(PORT, () => {
       console.log(`app run on port ${PORT}`);
     });
@@ -44,3 +45,50 @@ connectDB()
   .catch((error) => {
     console.error("database not connected");
   });
+
+// import express from "express";
+// import 'dotenv/config';
+// import cookieParser from "cookie-parser";
+// import cors from "cors"
+
+// import path from "path"
+
+// import { connectDB } from "./lib/db.js"; 
+
+// import authRoutes from "./routes/auth.route.js";
+// import messageRoutes from "./routes/message.route.js";
+// import { app, server } from "./lib/socket.js";
+
+// const PORT = process.env.PORT || 5000;
+// const __dirname = path.resolve();
+
+// app.use(express.json({ limit: "10mb" }));
+// app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
+// app.use(cookieParser()); 
+// app.use(cors({
+//   origin: "http://localhost:5173/", // your frontend port
+//   credentials: true,
+// }));
+
+// app.use("/api/auth", authRoutes);
+// app.use("/api/message", messageRoutes);
+
+// if (process.env.NODE_ENV === "production") {
+//   app.use(express.static(path.join(__dirname, "../frontend/dist")));
+
+//   app.get("*", (req, res) => {
+//     res.sendFile(path.join(__dirname, "../frontend", "dist", "index.html"));
+//   });
+// }
+
+// connectDB()
+//   .then(() => {
+//     console.log("Database Connected Successfully");
+//     server.listen(PORT, () => {
+//       console.log(`app run on port ${PORT}`);
+//     });
+//   })
+//   .catch((error) => {
+//     console.error("database not connected");
+//   });
