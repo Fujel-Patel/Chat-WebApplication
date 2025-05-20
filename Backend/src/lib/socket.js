@@ -11,7 +11,7 @@ const userSocketMap = {}; // { userId: socketId }
 
 const io = new Server(server, {
   cors: {
-    origin: "chat-web-application-eqt3.vercel.app",
+    origin: "https://chat-web-application-eqt3.vercel.app",
     credentials: true,
   },
 });
