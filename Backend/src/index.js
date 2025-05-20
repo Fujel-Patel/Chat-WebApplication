@@ -25,17 +25,17 @@ app.use(cors({
 app.use("/api/auth", authRoutes);
 app.use("/api/message", messageRoutes);
 
-if (process.env.NODE_ENV === "production") {
-  const frontendDistPath = path.join(__dirname, "../../frontend/dist");
-  const frontendIndexPath = path.join(__dirname, "../../frontend", "dist", "index.html");
-  console.log("Serving static files from:", frontendDistPath);
-  console.log("Serving index.html from:", frontendIndexPath);
-  app.use(express.static(frontendDistPath));
+// if (process.env.NODE_ENV === "production") {
+//   const frontendDistPath = path.join(__dirname, "../../frontend/dist");
+//   const frontendIndexPath = path.join(__dirname, "../../frontend", "dist", "index.html");
+//   console.log("Serving static files from:", frontendDistPath);
+//   console.log("Serving index.html from:", frontendIndexPath);
+//   app.use(express.static(frontendDistPath));
 
-  app.get("*", (req, res) => {
-    res.sendFile(frontendIndexPath);
-  });
-}
+//   app.get("*", (req, res) => {
+//     res.sendFile(frontendIndexPath);
+//   });
+// }
 
 connectDB()
   .then(() => {
