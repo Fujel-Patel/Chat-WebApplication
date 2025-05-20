@@ -26,24 +26,20 @@ app.use("/api/auth", authRoutes);
 app.use("/api/message", messageRoutes);
 
 if (process.env.NODE_ENV === "production") {
-  app.use(express.static(path.join(__dirname, "../frontend/dist")));
+  app.use(express.static(path.join(__dirname, "../../frontend/dist")));
 
   app.get("*", (req, res) => {
-    res.sendFile(path.join(__dirname, "../frontend", "dist", "index.html"));
+    res.sendFile(path.join(__dirname, "../../frontend", "dist", "index.html"));
   });
 }
 
 connectDB()
   .then(() => {
     console.log("Database Connected Successfully");
-    const server = http.createServer(app); // Create the HTTP server here
-    io.attach(server); // Attach Socket.IO to this server
-    server.listen(PORT, () => {
-      console.log(`app run on port ${PORT}`);
-    });
+    // ... server startup ...
   })
   .catch((error) => {
-    console.error("database not connected");
+    console.error("database not connected:", error); // Log the error here
   });
 
 // import express from "express";
