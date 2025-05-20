@@ -2,7 +2,6 @@ import { create } from "zustand";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { useAuthStore } from "./useAuthStore";
-import "dotenv/config";
 
 const BASE_URL = import.meta.env.BASE_URL;
 

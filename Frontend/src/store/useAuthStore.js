@@ -2,7 +2,6 @@ import { create } from "zustand";
 import toast from "react-hot-toast";
 import { io } from "socket.io-client";
 import axios from "axios";
-import "dotenv/config";
 
 const BASE_URL = import.meta.env.BASE_URL;
 

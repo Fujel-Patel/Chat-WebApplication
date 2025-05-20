@@ -1,5 +1,4 @@
 import axios from 'axios';
-import "dotenv/config"
 
 // Create an axios instance with predefined configuration
 const axiosInstance = axios.create({
