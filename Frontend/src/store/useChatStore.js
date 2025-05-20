@@ -1,9 +1,7 @@
 import { create } from "zustand";
-import axios from "axios";
 import toast from "react-hot-toast";
 import { useAuthStore } from "./useAuthStore";
-
-const VITE_API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import axiosInstance from "../path/to/axiosInstance"; // Use your axios instance
 
 export const useChatStore = create((set, get) => ({
   messages: [],
@@ -15,9 +13,7 @@ export const useChatStore = create((set, get) => ({
   getUsers: async () => {
     set({ isUsersLoading: true });
     try {
-      const res = await axios.get(`${VITE_API_BASE_URL}/api/message/users`, {
-        withCredentials: true,
-      });
+      const res = await axiosInstance.get(`/api/message/users`);
       set({ users: res.data });
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to load users");
@@ -29,9 +25,7 @@ export const useChatStore = create((set, get) => ({
   getMessages: async (userId) => {
     set({ isMessagesLoading: true });
     try {
-      const res = await axios.get(`${VITE_API_BASE_URL}/api/message/${userId}`, {
-        withCredentials: true,
-      });
+      const res = await axiosInstance.get(`/api/message/${userId}`);
       set({ messages: res.data });
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to load messages");
@@ -47,10 +41,9 @@ export const useChatStore = create((set, get) => ({
       return;
     }
     try {
-      const res = await axios.post(
-        `${VITE_API_BASE_URL}/api/message/send/${selectedUser._id}`,
-        messageData,
-        { withCredentials: true }
+      const res = await axiosInstance.post(
+        `/api/message/send/${selectedUser._id}`,
+        messageData
       );
       set({ messages: [...messages, res.data] });
     } catch (error) {
@@ -63,10 +56,11 @@ export const useChatStore = create((set, get) => ({
     const socket = useAuthStore.getState().socket;
     if (!selectedUser || !socket) return;
 
+    // Clean up any previous listeners first (optional safety)
+    socket.off("newMessage");
+
     socket.on("newMessage", (newMessage) => {
-      const isMessageSentFromSelectedUser =
-        newMessage.senderId === selectedUser._id;
-      if (!isMessageSentFromSelectedUser) return;
+      if (newMessage.senderId !== selectedUser._id) return;
 
       set((state) => ({
         messages: [...state.messages, newMessage],
@@ -83,12 +77,14 @@ export const useChatStore = create((set, get) => ({
 
   setSelectedUser: (selectedUser) => set({ selectedUser }),
 }));
+
+
 // import { create } from "zustand";
+// import axios from "axios";
 // import toast from "react-hot-toast";
 // import { useAuthStore } from "./useAuthStore";
-// import axios from "axios"
-// const BASE_URL =
-//   import.meta.env.MODE === "development" ? "http://localhost:5001" : "/";
+
+// const VITE_API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // export const useChatStore = create((set, get) => ({
 //   messages: [],
@@ -100,10 +96,12 @@ export const useChatStore = create((set, get) => ({
 //   getUsers: async () => {
 //     set({ isUsersLoading: true });
 //     try {
-//       const res = await axios.get(`${BASE_URL}/messages/users`);
+//       const res = await axios.get(`${VITE_API_BASE_URL}/api/message/users`, {
+//         withCredentials: true,
+//       });
 //       set({ users: res.data });
 //     } catch (error) {
-//       toast.error(error.response.data.message);
+//       toast.error(error.response?.data?.message || "Failed to load users");
 //     } finally {
 //       set({ isUsersLoading: false });
 //     }
@@ -112,43 +110,56 @@ export const useChatStore = create((set, get) => ({
 //   getMessages: async (userId) => {
 //     set({ isMessagesLoading: true });
 //     try {
-//       const res = await axios.get(`${BASE_URL}/messages/${userId}`);
+//       const res = await axios.get(`${VITE_API_BASE_URL}/api/message/${userId}`, {
+//         withCredentials: true,
+//       });
 //       set({ messages: res.data });
 //     } catch (error) {
-//       toast.error(error.response.data.message);
+//       toast.error(error.response?.data?.message || "Failed to load messages");
 //     } finally {
 //       set({ isMessagesLoading: false });
 //     }
 //   },
+
 //   sendMessage: async (messageData) => {
 //     const { selectedUser, messages } = get();
+//     if (!selectedUser) {
+//       toast.error("No user selected to send a message");
+//       return;
+//     }
 //     try {
-//       const res = await axios.post(`${BASE_URL}/messages/send/${selectedUser._id}`, messageData);
+//       const res = await axios.post(
+//         `${VITE_API_BASE_URL}/api/message/send/${selectedUser._id}`,
+//         messageData,
+//         { withCredentials: true }
+//       );
 //       set({ messages: [...messages, res.data] });
 //     } catch (error) {
-//       toast.error(error.response.data.message);
+//       toast.error(error.response?.data?.message || "Failed to send message");
 //     }
 //   },
 
 //   subscribeToMessages: () => {
 //     const { selectedUser } = get();
-//     if (!selectedUser) return;
-
 //     const socket = useAuthStore.getState().socket;
+//     if (!selectedUser || !socket) return;
 
 //     socket.on("newMessage", (newMessage) => {
-//       const isMessageSentFromSelectedUser = newMessage.senderId === selectedUser._id;
+//       const isMessageSentFromSelectedUser =
+//         newMessage.senderId === selectedUser._id;
 //       if (!isMessageSentFromSelectedUser) return;
 
-//       set({
-//         messages: [...get().messages, newMessage],
-//       });
+//       set((state) => ({
+//         messages: [...state.messages, newMessage],
+//       }));
 //     });
 //   },
 
 //   unsubscribeFromMessages: () => {
 //     const socket = useAuthStore.getState().socket;
-//     socket.off("newMessage");
+//     if (socket) {
+//       socket.off("newMessage");
+//     }
 //   },
 
 //   setSelectedUser: (selectedUser) => set({ selectedUser }),
