@@ -18,7 +18,7 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 app.use(cookieParser());
 app.use(cors({
-  origin: "http://localhost:5173/", // your frontend port
+  origin: "chat-web-application-eqt3.vercel.app", // your frontend port
   credentials: true,
 }));
 

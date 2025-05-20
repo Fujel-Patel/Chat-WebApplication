@@ -2,9 +2,9 @@ import { create } from "zustand";
 import toast from "react-hot-toast";
 import { io } from "socket.io-client";
 import axios from "axios";
+import "dotenv/config";
 
-const BASE_URL =
-  import.meta.env.MODE === "development" ? "http://localhost:5001" : "/";
+const BASE_URL = process.env.BASE_URL;
 
 export const useAuthStore = create((set, get) => ({
   authUser: null,

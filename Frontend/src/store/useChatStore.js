@@ -2,9 +2,9 @@ import { create } from "zustand";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { useAuthStore } from "./useAuthStore";
+import "dotenv/config";
 
-const BASE_URL =
-  import.meta.env.MODE === "development" ? "http://localhost:5001" : "/";
+const BASE_URL = process.env.BASE_URL;
 
 export const useChatStore = create((set, get) => ({
   messages: [],
