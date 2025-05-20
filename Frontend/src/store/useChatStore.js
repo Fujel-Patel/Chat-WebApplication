@@ -3,7 +3,7 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import { useAuthStore } from "./useAuthStore";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const VITE_API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export const useChatStore = create((set, get) => ({
   messages: [],
@@ -15,7 +15,7 @@ export const useChatStore = create((set, get) => ({
   getUsers: async () => {
     set({ isUsersLoading: true });
     try {
-      const res = await axios.get(`${BASE_URL}/api/message/users`, {
+      const res = await axios.get(`${VITE_API_BASE_URL}/api/message/users`, {
         withCredentials: true,
       });
       set({ users: res.data });
@@ -29,7 +29,7 @@ export const useChatStore = create((set, get) => ({
   getMessages: async (userId) => {
     set({ isMessagesLoading: true });
     try {
-      const res = await axios.get(`${BASE_URL}/api/message/${userId}`, {
+      const res = await axios.get(`${VITE_API_BASE_URL}/api/message/${userId}`, {
         withCredentials: true,
       });
       set({ messages: res.data });
@@ -48,7 +48,7 @@ export const useChatStore = create((set, get) => ({
     }
     try {
       const res = await axios.post(
-        `${BASE_URL}/api/message/send/${selectedUser._id}`,
+        `${VITE_API_BASE_URL}/api/message/send/${selectedUser._id}`,
         messageData,
         { withCredentials: true }
       );
