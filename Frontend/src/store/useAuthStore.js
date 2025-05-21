@@ -3,13 +3,11 @@ import toast from "react-hot-toast";
 import { io } from "socket.io-client";
 import axios from "axios";
 
-const VITE_API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const VITE_API_BASE_URL = "https://chat-webapplication-yf2z.onrender.com";
 
 // Setup default axios authorization header if token exists
 const token = localStorage.getItem("token");
-if (token) {
-  axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-}
+axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
 
 export const useAuthStore = create((set, get) => ({
   authUser: null,
