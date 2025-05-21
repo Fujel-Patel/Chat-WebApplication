@@ -63,10 +63,15 @@ export const useChatStore = create((set, get) => ({
     const socket = useAuthStore.getState().socket;
     if (!selectedUser || !socket) return;
 
+    // Remove any existing listener before adding new one
+    socket.off("newMessage");
+
     socket.on("newMessage", (newMessage) => {
-      const isMessageSentFromSelectedUser =
-        newMessage.senderId === selectedUser._id;
-      if (!isMessageSentFromSelectedUser) return;
+      const isFromSelectedUser = 
+        newMessage.senderId === selectedUser._id || 
+        newMessage.receiverId === selectedUser._id; // To handle both directions
+
+      if (!isFromSelectedUser) return;
 
       set((state) => ({
         messages: [...state.messages, newMessage],
@@ -81,5 +86,5 @@ export const useChatStore = create((set, get) => ({
     }
   },
 
-  setSelectedUser: (selectedUser) => set({ selectedUser }),
+  setSelectedUser: (selectedUser) => set({ selectedUser, messages: [] }), // Clear messages when changing user
 }));

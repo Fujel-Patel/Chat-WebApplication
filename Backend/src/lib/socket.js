@@ -1,34 +1,29 @@
-import { Server } from "socket.io";
-import http from "http";
 import express from "express";
+import http from "http";
+import { Server } from "socket.io";
 
-const app = express(); // Create the Express app here
+const app = express(); // Create Express app
+const server = http.createServer(app); // Create HTTP server with app
 
-const server = http.createServer(app); // Create the HTTP server with the app
-
-// Used to store online users
-const userSocketMap = {}; // { userId: socketId }
-
-// --- FIX START: Socket.IO CORS Configuration ---
-// Define all allowed origins for Socket.IO, mirroring your Express CORS setup.
+// Allowed origins for Socket.IO and CORS (keep this in sync with your backend CORS)
 const allowedOrigins = [
-  "https://chat-web-application-eqt3.vercel.app", // Your primary Vercel deployment URL
-  "https://chat-web-application-eqt3-2hetdbyns-fujel-patels-projects.vercel.app", // The specific preview URL from your error
-  "http://localhost:5173", // Example for Vite frontend local dev
-  "http://localhost:3000", // Another common React frontend local dev port
+  "https://chat-web-application-eqt3.vercel.app",
+  "https://chat-web-application-eqt3-2hetdbyns-fujel-patels-projects.vercel.app",
+  "http://localhost:5173",
+  "http://localhost:3000",
 ];
 
 const io = new Server(server, {
   cors: {
-    // Socket.IO's origin configuration should also handle multiple origins.
-    // It can directly take an array of origins.
     origin: allowedOrigins,
-    credentials: true, // Allow cookies to be sent with WebSocket handshake
+    credentials: true,
   },
 });
-// --- FIX END: Socket.IO CORS Configuration ---
 
-// Utility to get receiver's socket ID
+// Map userId to socketId
+const userSocketMap = {};
+
+// Utility to get receiver socket id by user id
 export function getReceiverSocketId(userId) {
   return userSocketMap[userId];
 }
@@ -43,13 +38,12 @@ io.on("connection", (socket) => {
     console.log(`User ${userId} mapped to socket ${socket.id}`);
   }
 
-  // Send list of online users to all clients
   io.emit("getOnlineUsers", Object.keys(userSocketMap));
 
   socket.on("disconnect", () => {
     console.log("A user disconnected:", socket.id);
 
-    // Remove user from userSocketMap
+    // Remove user from map
     for (const [uid, sid] of Object.entries(userSocketMap)) {
       if (sid === socket.id) {
         delete userSocketMap[uid];
@@ -57,117 +51,8 @@ io.on("connection", (socket) => {
       }
     }
 
-    // Notify all clients of updated online users
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
   });
 });
 
-// Export io and the app for use in your main index.js
-export { io, app };
-
-// import { Server } from "socket.io";
-// import http from "http";
-// import express from "express";
-
-// const app = express(); // Create the Express app here
-
-// const server = http.createServer(app); // Create the HTTP server with the app
-
-// // Used to store online users
-// const userSocketMap = {}; // { userId: socketId }
-
-// const io = new Server(server, {
-//   cors: {
-//     origin: "https://chat-web-application-eqt3.vercel.app",
-//     credentials: true,
-//   },
-// });
-
-// // Utility to get receiver's socket ID
-// export function getReceiverSocketId(userId) {
-//   return userSocketMap[userId];
-// }
-
-// io.on("connection", (socket) => {
-//   console.log("A user connected:", socket.id);
-
-//   const userId = socket.handshake.query.userId;
-
-//   if (userId) {
-//     userSocketMap[userId] = socket.id;
-//     console.log(`User ${userId} mapped to socket ${socket.id}`);
-//   }
-
-//   // Send list of online users to all clients
-//   io.emit("getOnlineUsers", Object.keys(userSocketMap));
-
-//   socket.on("disconnect", () => {
-//     console.log("A user disconnected:", socket.id);
-
-//     // Remove user from userSocketMap
-//     for (const [uid, sid] of Object.entries(userSocketMap)) {
-//       if (sid === socket.id) {
-//         delete userSocketMap[uid];
-//         break;
-//       }
-//     }
-
-//     // Notify all clients of updated online users
-//     io.emit("getOnlineUsers", Object.keys(userSocketMap));
-//   });
-// });
-
-// export { io, app }; // Export io and the app
-
-// // import { Server } from "socket.io";
-// // import http from "http";
-// // import express from "express";
-
-// // const app = express();
-// // const server = http.createServer(app);
-
-// // // Used to store online users
-// // const userSocketMap = {}; // { userId: socketId }
-
-// // const io = new Server(server, {
-// //   cors: {
-// //     origin: "http://localhost:5173",
-// //     credentials: true,
-// //   },
-// // });
-
-// // // Utility to get receiver's socket ID
-// // export function getReceiverSocketId(userId) {
-// //   return userSocketMap[userId];
-// // }
-
-// // io.on("connection", (socket) => {
-// //   console.log("A user connected:", socket.id);
-
-// //   const userId = socket.handshake.query.userId;
-
-// //   if (userId) {
-// //     userSocketMap[userId] = socket.id;
-// //     console.log(`User ${userId} mapped to socket ${socket.id}`);
-// //   }
-
-// //   // Send list of online users to all clients
-// //   io.emit("getOnlineUsers", Object.keys(userSocketMap));
-
-// //   socket.on("disconnect", () => {
-// //     console.log("A user disconnected:", socket.id);
-
-// //     // Remove user from userSocketMap
-// //     for (const [uid, sid] of Object.entries(userSocketMap)) {
-// //       if (sid === socket.id) {
-// //         delete userSocketMap[uid];
-// //         break;
-// //       }
-// //     }
-
-// //     // Notify all clients of updated online users
-// //     io.emit("getOnlineUsers", Object.keys(userSocketMap));
-// //   });
-// // });
-
-// // export { io, app, server };
+export { io, app, server };

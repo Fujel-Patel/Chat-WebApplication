@@ -5,7 +5,7 @@ import axios from "axios";
 
 const VITE_API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-// Set default Axios headers from stored token
+// Setup default axios authorization header if token exists
 const token = localStorage.getItem("token");
 if (token) {
   axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
@@ -36,15 +36,24 @@ export const useAuthStore = create((set, get) => ({
   signup: async (data) => {
     set({ isSigningUp: true });
     try {
-      const res = await axios.post(`${VITE_API_BASE_URL}/api/auth/signup`, data);
-      
-      // ✅ Save JWT token
+      const res = await axios.post(
+        `${VITE_API_BASE_URL}/api/auth/signup`,
+        data
+      );
+
+      // Save JWT token
       localStorage.setItem("token", res.data.token);
-      axios.defaults.headers.common["Authorization"] = `Bearer ${res.data.token}`;
+      axios.defaults.headers.common[
+        "Authorization"
+      ] = `Bearer ${res.data.token}`;
+
+      // Disconnect previous socket if exists
+      const prevSocket = get().socket;
+      if (prevSocket) prevSocket.disconnect();
 
       set({ authUser: res.data.user });
-      toast.success("Account created successfully");
       get().connectSocket();
+      toast.success("Account created successfully");
     } catch (error) {
       toast.error(error?.response?.data?.message || "Signup failed");
     } finally {
@@ -56,14 +65,20 @@ export const useAuthStore = create((set, get) => ({
     set({ isLoggingIn: true });
     try {
       const res = await axios.post(`${VITE_API_BASE_URL}/api/auth/login`, data);
-      
-      // ✅ Save JWT token
+
+      // Save JWT token
       localStorage.setItem("token", res.data.token);
-      axios.defaults.headers.common["Authorization"] = `Bearer ${res.data.token}`;
+      axios.defaults.headers.common[
+        "Authorization"
+      ] = `Bearer ${res.data.token}`;
+
+      // Disconnect previous socket if exists
+      const prevSocket = get().socket;
+      if (prevSocket) prevSocket.disconnect();
 
       set({ authUser: res.data.user });
-      toast.success("Logged in successfully");
       get().connectSocket();
+      toast.success("Logged in successfully");
     } catch (error) {
       toast.error(error?.response?.data?.message || "Login failed");
     } finally {
@@ -74,8 +89,8 @@ export const useAuthStore = create((set, get) => ({
   logout: async () => {
     try {
       await axios.post(`${VITE_API_BASE_URL}/api/auth/logout`);
-      
-      // ✅ Clear token
+
+      // Clear token and headers
       localStorage.removeItem("token");
       delete axios.defaults.headers.common["Authorization"];
 
@@ -90,7 +105,10 @@ export const useAuthStore = create((set, get) => ({
   updateProfile: async (data) => {
     set({ isUpdatingProfile: true });
     try {
-      const res = await axios.put(`${VITE_API_BASE_URL}/api/auth/updateProfile`, data);
+      const res = await axios.put(
+        `${VITE_API_BASE_URL}/api/auth/updateProfile`,
+        data
+      );
       set({ authUser: res.data });
       toast.success("Profile updated successfully");
     } catch (error) {
@@ -102,10 +120,16 @@ export const useAuthStore = create((set, get) => ({
 
   connectSocket: () => {
     const { authUser, socket } = get();
-    if (!authUser || !authUser._id || socket?.connected) return;
+    if (!authUser?._id) return;
+
+    // Disconnect existing socket to avoid duplicates
+    if (socket) {
+      socket.disconnect();
+    }
 
     const newSocket = io(VITE_API_BASE_URL, {
-      query: { userId: authUser._id },
+      auth: { userId: authUser._id },
+      withCredentials: true,
     });
 
     set({ socket: newSocket });

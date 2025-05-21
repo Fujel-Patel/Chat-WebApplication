@@ -7,7 +7,7 @@ import {
   updateProfile,
   checkAuth,
 } from "../controllers/auth.controller.js";
-import protectRoute from "../middleware/auth.middleware.js";
+import protectRoute from "../middleware/protectRoute.js";
 
 router.get("/check", protectRoute, checkAuth);
 router.post("/signup", signup);
