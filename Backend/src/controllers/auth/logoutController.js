@@ -1,4 +1,3 @@
-
 const logout = (req, res) => {
   try {
     res.cookie("jwt", "", { maxAge: 0 }); // Clear the jwt cookie

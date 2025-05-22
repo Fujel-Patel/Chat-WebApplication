@@ -13,7 +13,8 @@ import { useAuthStore } from "./store/useAuthStore";
 import { useThemeStore } from "./store/useThemeStore";
 
 const App = () => {
-  const { authUser, isCheckingAuth, onlineUsers, connectSocket } = useAuthStore();
+  const { authUser, isCheckingAuth, onlineUsers, connectSocket } =
+    useAuthStore();
   const { theme } = useThemeStore();
   const checkAuth = useAuthStore((state) => state.checkAuth);
   useEffect(() => {
@@ -24,7 +25,7 @@ const App = () => {
     if (authUser && authUser._id) {
       connectSocket();
     }
-  }, [authUser]);  
+  }, [authUser]);
 
   if (isCheckingAuth && !authUser) {
     return (
@@ -33,16 +34,33 @@ const App = () => {
       </div>
     );
   }
+  console.log("authUser:", authUser);
+  console.log("isCheckingAuth:", isCheckingAuth);
 
   return (
     <div data-theme={theme}>
       <Navbar />
       <Routes>
-        <Route path="/" element={authUser ? <HomePage /> : <Navigate to="/login" />} />
-        <Route path="/signup" element={!authUser ? <SignupPage /> : <Navigate to="/" />} />
-        <Route path="/login" element={!authUser ? <LoginPage /> : <Navigate to="/" />} />
-        <Route path="/settings" element={authUser ? <SettingsPage /> : <Navigate to="/login" />} />
-        <Route path="/profile" element={authUser ? <ProfilePage /> : <Navigate to="/login" />} />
+        <Route
+          path="/"
+          element={authUser ? <HomePage /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/signup"
+          element={!authUser ? <SignupPage /> : <Navigate to="/" />}
+        />
+        <Route
+          path="/login"
+          element={!authUser ? <LoginPage /> : <Navigate to="/" />}
+        />
+        <Route
+          path="/settings"
+          element={authUser ? <SettingsPage /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/profile"
+          element={authUser ? <ProfilePage /> : <Navigate to="/login" />}
+        />
       </Routes>
       <Toaster />
     </div>
