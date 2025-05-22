@@ -5,9 +5,27 @@ import axios from "axios";
 
 const VITE_API_BASE_URL = "https://chat-webapplication-yf2z.onrender.com";
 
-// Setup default axios authorization header if token exists
+// ✅ Fixed: Only set authorization header if token exists and is valid
 const token = localStorage.getItem("token");
-axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+if (token && token !== "null" && token !== "undefined") {
+  axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+}
+
+// ✅ Add axios interceptor to handle token errors globally
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Clear invalid token
+      localStorage.removeItem("token");
+      delete axios.defaults.headers.common["Authorization"];
+      
+      // Optional: You can dispatch a logout action here if needed
+      console.log("Token expired or invalid, cleared from storage");
+    }
+    return Promise.reject(error);
+  }
+);
 
 export const useAuthStore = create((set, get) => ({
   authUser: null,
@@ -20,11 +38,21 @@ export const useAuthStore = create((set, get) => ({
 
   checkAuth: async () => {
     try {
+      // ✅ Check if valid token exists before making request
+      const token = localStorage.getItem("token");
+      if (!token || token === "null" || token === "undefined") {
+        set({ authUser: null, isCheckingAuth: false });
+        return;
+      }
+
       const res = await axios.get(`${VITE_API_BASE_URL}/api/auth/check`);
       set({ authUser: res.data });
       get().connectSocket();
     } catch (error) {
       console.log("Error in checkAuth:", error);
+      // ✅ Clear invalid token
+      localStorage.removeItem("token");
+      delete axios.defaults.headers.common["Authorization"];
       set({ authUser: null });
     } finally {
       set({ isCheckingAuth: false });
@@ -39,11 +67,13 @@ export const useAuthStore = create((set, get) => ({
         data
       );
 
-      // Save JWT token
-      localStorage.setItem("token", res.data.token);
-      axios.defaults.headers.common[
-        "Authorization"
-      ] = `Bearer ${res.data.token}`;
+      // ✅ Validate token before saving
+      if (res.data.token && res.data.token !== "null") {
+        localStorage.setItem("token", res.data.token);
+        axios.defaults.headers.common[
+          "Authorization"
+        ] = `Bearer ${res.data.token}`;
+      }
 
       // Disconnect previous socket if exists
       const prevSocket = get().socket;
@@ -64,11 +94,13 @@ export const useAuthStore = create((set, get) => ({
     try {
       const res = await axios.post(`${VITE_API_BASE_URL}/api/auth/login`, data);
 
-      // Save JWT token
-      localStorage.setItem("token", res.data.token);
-      axios.defaults.headers.common[
-        "Authorization"
-      ] = `Bearer ${res.data.token}`;
+      // ✅ Validate token before saving
+      if (res.data.token && res.data.token !== "null") {
+        localStorage.setItem("token", res.data.token);
+        axios.defaults.headers.common[
+          "Authorization"
+        ] = `Bearer ${res.data.token}`;
+      }
 
       // Disconnect previous socket if exists
       const prevSocket = get().socket;
@@ -87,16 +119,17 @@ export const useAuthStore = create((set, get) => ({
   logout: async () => {
     try {
       await axios.post(`${VITE_API_BASE_URL}/api/auth/logout`);
-
-      // Clear token and headers
+    } catch (error) {
+      // ✅ Don't show error toast for logout - might be expected if token is invalid
+      console.log("Logout error:", error);
+    } finally {
+      // ✅ Always clear token and headers on logout
       localStorage.removeItem("token");
       delete axios.defaults.headers.common["Authorization"];
-
+      
       get().disconnectSocket();
       set({ authUser: null, onlineUsers: [] });
       toast.success("Logged out successfully");
-    } catch (error) {
-      toast.error(error?.response?.data?.message || "Logout failed");
     }
   },
 
