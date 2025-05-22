@@ -6,7 +6,9 @@ const login = async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
-      return res.status(400).json({ message: "Please enter all required fields" }); // Consistent 'message' key
+      return res
+        .status(400)
+        .json({ message: "Please enter all required fields" }); // Consistent 'message' key
     }
 
     const user = await User.findOne({ email });
@@ -18,10 +20,13 @@ const login = async (req, res) => {
     generateToken(user._id, res); // Generate token and set cookie
 
     res.status(200).json({
-      _id: user._id,
-      fullName: user.fullName,
-      email: user.email,
-      profilePic: user.profilePic,
+      token: generateToken, // if you want to return token here
+      user: {
+        _id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        profilePic: user.profilePic,
+      },
     });
   } catch (err) {
     console.error("Error in login controller:", err.message); // Use console.error

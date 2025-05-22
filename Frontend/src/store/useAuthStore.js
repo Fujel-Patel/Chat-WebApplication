@@ -37,30 +37,31 @@ export const useAuthStore = create((set, get) => ({
   socket: null,
 
   checkAuth: async () => {
-    try {
-      // ✅ Check if valid token exists before making request
-      const token = localStorage.getItem("token");
-      if (!token || token === "null" || token === "undefined") {
-        set({ authUser: null, isCheckingAuth: false });
-        return;
-      }
-
-       // Set axios default Authorization header before making request
-    axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-    
-      const res = await axios.get(`${VITE_API_BASE_URL}/api/auth/check`);
-      set({ authUser: res.data });
-      get().connectSocket();
-    } catch (error) {
-      console.log("Error in checkAuth:", error);
-      // ✅ Clear invalid token
-      localStorage.removeItem("token");
-      delete axios.defaults.headers.common["Authorization"];
-      set({ authUser: null });
-    } finally {
-      set({ isCheckingAuth: false });
+  try {
+    const token = localStorage.getItem("token");
+    if (!token || token === "null" || token === "undefined") {
+      set({ authUser: null, isCheckingAuth: false });
+      return;
     }
-  },
+
+    // Make sure Authorization header is set before this call
+    axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+
+    const res = await axios.get(`${VITE_API_BASE_URL}/api/auth/check`);
+
+    // Fix here: set authUser directly from res.data (not res.data.user)
+    set({ authUser: res.data });
+
+    get().connectSocket();
+  } catch (error) {
+    console.log("Error in checkAuth:", error);
+    localStorage.removeItem("token");
+    delete axios.defaults.headers.common["Authorization"];
+    set({ authUser: null });
+  } finally {
+    set({ isCheckingAuth: false });
+  }
+},
 
   signup: async (data) => {
     set({ isSigningUp: true });
@@ -93,36 +94,34 @@ export const useAuthStore = create((set, get) => ({
   },
 
   login: async (data) => {
-    set({ isLoggingIn: true });
-    try {
-      // ✅ Debug: Log the URL being called
-      const loginUrl = `${VITE_API_BASE_URL}/api/auth/login`;
-      console.log("Attempting login to:", loginUrl);
-      console.log("VITE_API_BASE_URL:", VITE_API_BASE_URL);
-      
-      const res = await axios.post(loginUrl, data);
+  set({ isLoggingIn: true });
+  try {
+    const loginUrl = `${VITE_API_BASE_URL}/api/auth/login`;
+    console.log("Attempting login to:", loginUrl);
+    console.log("VITE_API_BASE_URL:", VITE_API_BASE_URL);
 
-      // ✅ Validate token before saving
-      if (res.data.token && res.data.token !== "null") {
-        localStorage.setItem("token", res.data.token);
-        axios.defaults.headers.common[
-          "Authorization"
-        ] = `Bearer ${res.data.token}`;
-      }
+    const res = await axios.post(loginUrl, data);
 
-      // Disconnect previous socket if exists
-      const prevSocket = get().socket;
-      if (prevSocket) prevSocket.disconnect();
-
-      set({ authUser: res.data.user });
-      get().connectSocket();
-      toast.success("Logged in successfully");
-    } catch (error) {
-      toast.error(error?.response?.data?.message || "Login failed");
-    } finally {
-      set({ isLoggingIn: false });
+    if (res.data && res.data.token && res.data.token !== "null") {
+      localStorage.setItem("token", res.data.token);
+      axios.defaults.headers.common["Authorization"] = `Bearer ${res.data.token}`;
     }
-  },
+
+    // Disconnect previous socket if exists
+    const prevSocket = get().socket;
+    if (prevSocket) prevSocket.disconnect();
+
+    // Fix here: set authUser directly from res.data (not res.data.user)
+    set({ authUser: res.data });
+
+    get().connectSocket();
+    toast.success("Logged in successfully");
+  } catch (error) {
+    toast.error(error?.response?.data?.message || "Login failed");
+  } finally {
+    set({ isLoggingIn: false });
+  }
+},
 
   logout: async () => {
     try {
