@@ -45,6 +45,9 @@ export const useAuthStore = create((set, get) => ({
         return;
       }
 
+       // Set axios default Authorization header before making request
+    axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    
       const res = await axios.get(`${VITE_API_BASE_URL}/api/auth/check`);
       set({ authUser: res.data });
       get().connectSocket();
