@@ -9,9 +9,9 @@ import {
 } from "../controllers/auth.controller.js";
 import protectRoute from "../middleware/protectRoute.js";
 
-router.get("/check", protectRoute, checkAuth);
+router.get('/check', protectRoute, checkAuth);
 router.post("/signup", signup);
-router.post("/login", login);
+router.post('/login', login);
 router.post("/logout", logout);
 
 router.put("/updateProfile", protectRoute, updateProfile);

@@ -92,7 +92,12 @@ export const useAuthStore = create((set, get) => ({
   login: async (data) => {
     set({ isLoggingIn: true });
     try {
-      const res = await axios.post(`${VITE_API_BASE_URL}/api/auth/login`, data);
+      // ✅ Debug: Log the URL being called
+      const loginUrl = `${VITE_API_BASE_URL}/api/auth/login`;
+      console.log("Attempting login to:", loginUrl);
+      console.log("VITE_API_BASE_URL:", VITE_API_BASE_URL);
+      
+      const res = await axios.post(loginUrl, data);
 
       // ✅ Validate token before saving
       if (res.data.token && res.data.token !== "null") {
