@@ -1,4 +1,4 @@
-export const logout = (req, res) => {
+const logout = (req, res) => {
   try {
     res.cookie("jwt", "", { maxAge: 0 });
     res.status(200).json({ message: "Logged out successfully" });
@@ -7,3 +7,4 @@ export const logout = (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+export default logout;

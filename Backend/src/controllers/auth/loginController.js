@@ -2,7 +2,7 @@ import { generateToken } from "../../lib/utils.js";
 import User from "../../models/user.model.js";
 import bcrypt from "bcryptjs";
 
-export const login = async (req, res) => {
+const login = async (req, res) => {
   const { email, password } = req.body;
   try {
     const user = await User.findOne({ email });
@@ -29,3 +29,4 @@ export const login = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 }
+export default login;
