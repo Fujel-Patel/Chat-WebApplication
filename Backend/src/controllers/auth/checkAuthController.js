@@ -2,12 +2,14 @@ import User from "../../models/user.model.js";
 
 const checkAuth = async (req, res) => {
   try {
+    // req.user._id should be set by your protectRoute middleware
     const user = await User.findById(req.user._id).select("-password");
 
     if (!user) {
       return res.status(401).json({ message: "User not found or unauthorized" });
     }
 
+    // Return user info without password
     res.status(200).json({
       _id: user._id,
       fullName: user.fullName,

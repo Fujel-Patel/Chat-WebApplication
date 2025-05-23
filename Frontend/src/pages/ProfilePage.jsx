@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { useAuthStore } from "../store/useAuthStore";
 import { Camera, Mail, User, CircleUserRound } from "lucide-react";
+import toast from "react-hot-toast";
 
 function ProfilePage() {
   const { authUser, isUpdatingProfile, updateProfile, isCheckingAuth } = useAuthStore();
-
   const [selectedImg, setSelectedImg] = useState(null);
   const [fullName, setFullName] = useState("");
-  
+
   useEffect(() => {
     if (authUser?.fullName) setFullName(authUser.fullName);
   }, [authUser]);
@@ -16,9 +16,16 @@ function ProfilePage() {
     const file = e.target.files[0];
     if (!file) return;
 
+    if (!file.type.startsWith("image/")) {
+      return toast.error("Please select a valid image file");
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      return toast.error("Image size should be less than 2MB");
+    }
+
     const reader = new FileReader();
     reader.onloadend = () => setSelectedImg(reader.result);
-    reader.onerror = () => alert("Failed to read file");
+    reader.onerror = () => toast.error("Failed to read file");
     reader.readAsDataURL(file);
   };
 
@@ -36,10 +43,16 @@ function ProfilePage() {
     }
 
     if (Object.keys(updatedFields).length === 0) {
-      return alert("No changes to update");
+      return toast("No changes to update");
     }
 
-    await updateProfile(updatedFields);
+    try {
+      await updateProfile(updatedFields);
+      toast.success("Profile updated successfully");
+      setSelectedImg(null); // clear temporary selected image
+    } catch (error) {
+      toast.error(error.message || "Failed to update profile");
+    }
   };
 
   if (isCheckingAuth || !authUser) {
@@ -49,6 +62,8 @@ function ProfilePage() {
       </div>
     );
   }
+
+  const displayImg = selectedImg || authUser.profilePic;
 
   return (
     <div className="h-screen pt-20">
@@ -62,11 +77,11 @@ function ProfilePage() {
           {/* Profile Picture */}
           <div className="flex flex-col items-center gap-4">
             <div className="relative">
-              {selectedImg || authUser.profilePic ? (
+              {displayImg ? (
                 <img
-                  src={selectedImg || authUser.profilePic}
-                  alt="Your profile"
-                  className="size-32 rounded-full object-cover border-4 border-base-content"
+                  src={displayImg}
+                  alt="User profile picture"
+                  className="w-32 h-32 rounded-full object-cover border-4 border-base-content"
                 />
               ) : (
                 <CircleUserRound className="w-32 h-32 text-zinc-500" />
@@ -74,6 +89,7 @@ function ProfilePage() {
 
               <label
                 htmlFor="avatar-upload"
+                aria-label="Upload profile picture"
                 className={`absolute bottom-0 right-0 bg-base-content p-2 rounded-full cursor-pointer hover:scale-105 transition-all ${
                   isUpdatingProfile ? "animate-pulse pointer-events-none" : ""
                 }`}
@@ -115,16 +131,14 @@ function ProfilePage() {
             <div className="text-sm text-zinc-400 flex items-center gap-2">
               <Mail className="w-4 h-4" /> Email Address
             </div>
-            <p className="px-4 py-2.5 bg-base-200 rounded-lg border">
-              {authUser?.email || "Email not available"}
-            </p>
+            <p className="px-4 py-2.5 bg-base-200 rounded-lg border">{authUser.email || "Email not available"}</p>
           </div>
 
           {/* Save Changes */}
           <div className="text-right">
             <button
               type="submit"
-              className={`btn btn-primary ${isUpdatingProfile && "loading"}`}
+              className={`btn btn-primary ${isUpdatingProfile ? "loading" : ""}`}
               disabled={isUpdatingProfile}
             >
               {isUpdatingProfile ? "Saving..." : "Save Changes"}

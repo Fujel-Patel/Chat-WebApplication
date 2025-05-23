@@ -13,27 +13,28 @@ import { useAuthStore } from "./store/useAuthStore";
 import { useThemeStore } from "./store/useThemeStore";
 
 const App = () => {
-  const { authUser, isCheckingAuth, onlineUsers, connectSocket } =
-    useAuthStore();
+  const { authUser, isCheckingAuth, connectSocket } = useAuthStore();
   const { theme } = useThemeStore();
   const checkAuth = useAuthStore((state) => state.checkAuth);
+
   useEffect(() => {
     checkAuth();
-  }, []);
+  }, [checkAuth]);
 
   useEffect(() => {
     if (authUser && authUser._id) {
       connectSocket();
     }
-  }, [authUser]);
+  }, [authUser, connectSocket]);
 
   if (isCheckingAuth && !authUser) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <Loader className="size-10 animate-spin" />
+        <Loader className="w-10 h-10 animate-spin" />
       </div>
     );
   }
+
   console.log("authUser:", authUser);
   console.log("isCheckingAuth:", isCheckingAuth);
 

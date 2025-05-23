@@ -1,11 +1,29 @@
-import axios from 'axios';
+// src/api/axiosInstance.js
+import axios from "axios";
 
-// Create an axios instance with predefined configuration
+const VITE_API_BASE_URL = "https://chat-webapplication-yf2z.onrender.com";
+
 const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
-  withCredentials: true, // Enables sending cookies in cross-origin requests
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  baseURL: VITE_API_BASE_URL,
 });
+
+// Attach token to every request (if available)
+const token = localStorage.getItem("token");
+if (token && token !== "null" && token !== "undefined") {
+  axiosInstance.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+}
+
+// Global error handling (e.g. token expiration)
+axiosInstance.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem("token");
+      delete axiosInstance.defaults.headers.common["Authorization"];
+      console.warn("Token expired or unauthorized. Cleared from storage.");
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default axiosInstance;
