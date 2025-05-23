@@ -1,84 +1,70 @@
-import User from "../../models/user.model.js"; // Verify path: user.model.js vs user.js
-import cloudinary from "../../lib/cloudinary.js"; // Verify path
+import User from "../../models/user.model.js";
+
+import cloudinary from "../../lib/cloudinary.js";
 
 const updateProfile = async (req, res) => {
   try {
-    const { fullName, profilePic } = req.body;
-    const userId = req.user._id;
+    const { profilePic, fullName } = req.body;
 
-    // 1. Validate User ID from Token
-    if (!userId) {
-      return res.status(401).json({ message: "Unauthorized: User ID not found in token." });
-    }
+    const userId = req.user._id; // Assuming req.user contains the authenticated user's info from protectRoute
 
-    const updates = {};
-    let userChanged = false; // Flag to track if any actual data change occurs
+    const updates = {}; // Initialize an object to hold the fields that need to be updated // Update the profile picture if provided
 
-    // 2. Handle Profile Picture Update
     if (profilePic) {
-      // Assuming `profilePic` is a data URI (base64 string) or a public URL.
-      // If it's a file buffer from `multer`, the approach would be different (`stream_upload`).
-      // It's good practice to validate the format of `profilePic` if it's user-provided.
-      // For example, ensure it starts with 'data:image/' for base64.
-      try {
-        const uploadResponse = await cloudinary.uploader.upload(profilePic, {
-          folder: "chat_app_profiles", // Use a specific folder
-          // Consider adding `overwrite: true` if you want to replace existing images
-          // for the same public_id (if you manage public_ids).
-          // Or generate a new public_id to keep a history of profile pics.
-        });
-        updates.profilePic = uploadResponse.secure_url;
-        userChanged = true;
-      } catch (uploadError) {
-        // Log cloudinary-specific errors
-        console.error("Cloudinary upload error:", uploadError);
-        return res.status(500).json({ message: "Failed to upload profile picture." });
-      }
-    }
+      // Basic check to see if it's a base64 string or a URL from client
 
-    // 3. Handle Full Name Update
-    if (fullName) {
-      const trimmedFullName = fullName.trim();
-      // Fetch the current user to compare against existing fullName
-      // This avoids unnecessary DB write if fullName hasn't changed.
-      const currentUser = await User.findById(userId).select("fullName");
-      if (currentUser && trimmedFullName !== currentUser.fullName) {
-        updates.fullName = trimmedFullName;
-        userChanged = true;
-      }
-    }
+      // Cloudinary upload expects a data URI (base64) or a URL.
 
-    // 4. Check if any actual updates were made
-    if (!userChanged) {
-      // More precise message
-      return res.status(400).json({ message: "No valid changes provided or detected." });
-    }
+      // If it's a local file path, you'd need multer.
 
-    // 5. Perform Database Update
+      // Assuming 'profilePic' from req.body is already a data URI or a URL for direct upload
+
+      const uploadResponse = await cloudinary.uploader.upload(profilePic, {
+        folder: "chat_app_profiles", // Use a specific folder name // Optional: public_id, transformation, etc.
+      });
+
+      updates.profilePic = uploadResponse.secure_url; // Set the secure URL from Cloudinary
+    } // Update the full name if provided and it's different
+
+    if (fullName && fullName.trim() !== req.user.fullName) {
+      // Only update if changed
+
+      updates.fullName = fullName.trim(); // Trim to avoid extra spaces
+    } // If no valid fields are provided for update, return a bad request response
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({
+        message: "No valid fields provided for update or no changes detected.",
+      });
+    } // Update the user's profile in the database
+
     const updatedUser = await User.findByIdAndUpdate(
       userId,
-      { $set: updates }, // Use $set to update only the specified fields
-      { new: true, runValidators: true }
-    ).select("-password");
 
-    // 6. Handle User Not Found After Update Attempt
+      updates,
+
+      { new: true, runValidators: true } // Return the updated document and run Mongoose validators
+    ).select("-password"); // Exclude password from the returned object // If the user doesn't exist or can't be updated, send a 404
+
     if (!updatedUser) {
-      // This means the user existed when we checked `currentUser` but was
-      // deleted before `findByIdAndUpdate` completed, or `userId` was invalid initially.
-      return res.status(404).json({ message: "User not found or unable to update." });
+      return res.status(404).json({ message: "User not found" });
     }
 
-    // 7. Success Response
     res.status(200).json({
       _id: updatedUser._id,
+
       fullName: updatedUser.fullName,
-      email: updatedUser.email, // Include email for consistency if needed by client
+
+      email: updatedUser.email,
+
       profilePic: updatedUser.profilePic,
-    });
-  } catch (error) {
-    // 8. Centralized Error Logging
-    console.error("Error in updateProfile controller:", error);
-    res.status(500).json({ message: "Internal Server Error during profile update." });
+    }); // Send the updated user data back
+  } catch (err) {
+    console.error("Error in updateProfile controller:", err.message); // Use console.error
+
+    res
+      .status(500)
+      .json({ message: "Internal server error during profile update." });
   }
 };
 

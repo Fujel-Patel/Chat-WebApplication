@@ -1,65 +1,71 @@
 import { generateToken } from "../../lib/utils.js";
-import User from "../../models/user.model.js"; // Assuming user.model.js might be renamed to user.js, verify path
+
+import User from "../../models/user.model.js";
+
 import bcrypt from "bcryptjs";
 
 const signup = async (req, res) => {
+  const { fullName, email, password } = req.body; // Removed profilePic from destructuring as it's not directly used here before save
+
   try {
-    const { fullName, email, password, profilePic } = req.body;
+    if (!fullName || !email || !password) {
+      return res.status(400).json({ message: "All fields are required" });
+    } // Password length validation (corrected logic and message)
 
-    // 1. More Specific Input Validation
-    if (!fullName) {
-      return res.status(400).json({ message: "Full name is required." });
-    }
-    if (!email) {
-      return res.status(400).json({ message: "Email is required." });
-    }
-    if (!password) {
-      return res.status(400).json({ message: "Password is required." });
-    }
-
-    // 2. Password Length Validation (Already good, no change needed)
     if (password.length < 6 || password.length > 14) {
-      return res.status(400).json({ message: "Password must be between 6 and 14 characters long." });
+      // Corrected "between 6 to 14" logic
+
+      return res
+
+        .status(400)
+
+        .json({
+          message: "Password length must be between 6 to 14 characters",
+        });
     }
 
-    // 3. Email Normalization and Existence Check
-    const normalizedEmail = email.toLowerCase(); // Standardize email to lowercase for consistency
-    const existingUser = await User.findOne({ email: normalizedEmail });
+    const user = await User.findOne({ email });
 
-    if (existingUser) {
-      return res.status(409).json({ message: "Email already exists. Please use a different one." });
+    if (user) {
+      return res
+        .status(409)
+        .json({ message: "Email already exists. Please try a different one." }); // 409 Conflict is more semantically correct for duplicate resource
     }
 
-    // 4. Password Hashing
     const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
 
-    // 5. Default Profile Picture Generation (Consider moving to a utility or client-side)
-    const defaultProfilePic = `https://avatar.iran.liara.run/public?username=${encodeURIComponent(fullName.split(" ")[0])}`;
+    const hashedPassword = await bcrypt.hash(password, salt); // Default profile picture (can be defined in model or here)
 
-    // 6. Create New User Instance
+    const defaultProfilePic = `https://avatar.iran.liara.run/public?username=${
+      fullName.split(" ")[0]
+    }`;
+
     const newUser = new User({
       fullName,
-      email: normalizedEmail, // Store normalized email
-      password: hashedPassword,
-      profilePic: profilePic || defaultProfilePic, // Use provided profilePic or default
-    });
 
-    // 7. Save User and Generate Token
-    await newUser.save(); // Save the user *before* generating a token based on their _id
+      email,
+
+      password: hashedPassword,
+
+      profilePic: req.body.profilePic || defaultProfilePic, // Use provided profilePic or default
+    }); // No need for `if (newUser)` check as `new User()` always returns an instance
 
     generateToken(newUser._id, res); // Generate token and set cookie
 
-    // 8. Successful Response
+    await newUser.save(); // Save the new user to the database
+
     res.status(201).json({
-      _id: newUser._id,
+      _id: newUser._id, // Changed from id to _id for consistency with Mongoose
+
       fullName: newUser.fullName,
+
       email: newUser.email,
+
       profilePic: newUser.profilePic,
     });
-  } catch (error) {
-    // 9. Robust Error Logging and Generic Client Message
-    console.error("Error in signup controller:", error);
+  } catch (err) {
+    console.error("Error in signup controller:", err.message); // Use console.error for errors // Provide a more generic error message to the client, log details internally
+
     res.status(500).json({ message: "Internal Server Error during signup." });
   }
 };
