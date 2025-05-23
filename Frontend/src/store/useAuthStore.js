@@ -47,7 +47,9 @@ export const useAuthStore = create((set, get) => ({
     // Make sure Authorization header is set before this call
     axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
 
-    const res = await axios.get(`${VITE_API_BASE_URL}/api/auth/check`);
+    const res = await axios.get(`${VITE_API_BASE_URL}/api/auth/check`, {
+  headers: { Authorization: `Bearer ${token}` },
+});
 
     // Fix here: set authUser directly from res.data (not res.data.user)
     set({ authUser: res.data });
