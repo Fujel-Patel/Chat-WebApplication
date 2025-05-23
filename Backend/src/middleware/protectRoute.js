@@ -1,57 +1,57 @@
 import jwt from "jsonwebtoken";
-import User from "../models/user.model.js";
+import User from "../models/user.model.js"; // Ensure path is correct, e.g., user.js or user.model.js
 
 const protectRoute = async (req, res, next) => {
   try {
-    // ✅ Extract token from Authorization header or cookies
-    let token;
     const authHeader = req.headers.authorization;
 
-    if (authHeader && authHeader.startsWith("Bearer ")) {
-      token = authHeader.split(" ")[1];
-    } else if (req.cookies?.jwt) {
-      token = req.cookies.jwt;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ message: "Unauthorized: No token provided or invalid format." });
     }
 
-    // ✅ Token presence check
+    const token = authHeader.split(" ")[1];
+
     if (!token || token === "null" || token === "undefined") {
-      return res.status(401).json({ message: "Unauthorized - No Valid Token Provided" });
+      return res.status(401).json({ message: "Unauthorized: Token is missing or invalid." });
     }
 
-    // ✅ JWT secret validation
+    // It's best practice to load dotenv at the app's entry point (e.g., server.js)
+    // so process.env.JWT_SECRET is guaranteed to be available globally.
     if (!process.env.JWT_SECRET) {
-      console.error("JWT_SECRET is not defined in environment variables");
-      return res.status(500).json({ message: "Server configuration error" });
+      console.error("Server configuration error: JWT_SECRET is not defined.");
+      return res.status(500).json({ message: "Server configuration error: Authentication secret missing." });
     }
 
-    // ✅ Decode and verify JWT
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    if (!decoded.userId) {
-      return res.status(401).json({ message: "Invalid token structure" });
+    if (!decoded || !decoded.userId) {
+      return res.status(401).json({ message: "Unauthorized: Invalid token payload." });
     }
 
-    // ✅ Fetch user and attach to request
-    const user = await User.findById(decoded.userId).select("-password");
+    // Select only necessary user fields to attach to the request
+    const user = await User.findById(decoded.userId).select("_id fullName email profilePic");
+
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      // User might have been deleted after the token was issued
+      return res.status(404).json({ message: "Unauthorized: User not found." });
     }
 
-    req.user = user;
-    req.userId = decoded.userId; // optional, for convenience in downstream handlers
+    req.user = user; // Attach the full user object to the request
     next();
   } catch (error) {
-    console.error(`[AuthError] ${error.message} - IP: ${req.ip} - URL: ${req.originalUrl}`);
+    console.error("Error in protectRoute middleware:", error); // Log full error object
 
+    // More specific error handling for JWT errors
     if (error.name === "JsonWebTokenError") {
-      return res.status(401).json({ message: "Unauthorized - Invalid Token" });
+      return res.status(401).json({ message: "Unauthorized: Invalid or malformed token." });
     } else if (error.name === "TokenExpiredError") {
-      return res.status(401).json({ message: "Unauthorized - Token Expired" });
+      return res.status(401).json({ message: "Unauthorized: Token has expired. Please log in again." });
     } else if (error.name === "NotBeforeError") {
-      return res.status(401).json({ message: "Unauthorized - Token Not Active Yet" });
+      return res.status(401).json({ message: "Unauthorized: Token not yet active." });
     }
 
-    return res.status(401).json({ message: "Unauthorized - Authentication Failed" });
+    // Generic fallback for any other unexpected errors
+    res.status(500).json({ message: "Internal server error during authentication." });
   }
 };
 

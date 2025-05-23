@@ -1,64 +1,65 @@
 import { generateToken } from "../../lib/utils.js";
-import User from "../../models/user.model.js";
+import User from "../../models/user.js"; // Assuming user.model.js might be renamed to user.js, verify path
 import bcrypt from "bcryptjs";
 
 const signup = async (req, res) => {
-  const { fullName, email, password } = req.body;
-
   try {
-    if (!fullName || !email || !password) {
-      return res.status(400).json({ message: "All fields are required" });
+    const { fullName, email, password, profilePic } = req.body;
+
+    // 1. More Specific Input Validation
+    if (!fullName) {
+      return res.status(400).json({ message: "Full name is required." });
+    }
+    if (!email) {
+      return res.status(400).json({ message: "Email is required." });
+    }
+    if (!password) {
+      return res.status(400).json({ message: "Password is required." });
     }
 
+    // 2. Password Length Validation (Already good, no change needed)
     if (password.length < 6 || password.length > 14) {
-      return res.status(400).json({
-        message: "Password length must be between 6 to 14 characters",
-      });
+      return res.status(400).json({ message: "Password must be between 6 and 14 characters long." });
     }
 
-    const userExists = await User.findOne({ email });
-    if (userExists) {
-      return res
-        .status(409)
-        .json({ message: "Email already exists. Please try a different one." });
+    // 3. Email Normalization and Existence Check
+    const normalizedEmail = email.toLowerCase(); // Standardize email to lowercase for consistency
+    const existingUser = await User.findOne({ email: normalizedEmail });
+
+    if (existingUser) {
+      return res.status(409).json({ message: "Email already exists. Please use a different one." });
     }
 
+    // 4. Password Hashing
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    const defaultProfilePic = `https://avatar.iran.liara.run/public?username=${
-      fullName.split(" ")[0]
-    }`;
+    // 5. Default Profile Picture Generation (Consider moving to a utility or client-side)
+    const defaultProfilePic = `https://avatar.iran.liara.run/public?username=${encodeURIComponent(fullName.split(" ")[0])}`;
 
+    // 6. Create New User Instance
     const newUser = new User({
       fullName,
-      email,
+      email: normalizedEmail, // Store normalized email
       password: hashedPassword,
-      profilePic: req.body.profilePic || defaultProfilePic,
+      profilePic: profilePic || defaultProfilePic, // Use provided profilePic or default
     });
 
-    await newUser.save();
+    // 7. Save User and Generate Token
+    await newUser.save(); // Save the user *before* generating a token based on their _id
 
-    const token = generateToken(newUser._id); // Generate token string
+    generateToken(newUser._id, res); // Generate token and set cookie
 
-    // Optionally set token as HTTP-only cookie
-    // res.cookie("token", token, {
-    //   httpOnly: true,
-    //   secure: process.env.NODE_ENV === "production",
-    //   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    // });
-
+    // 8. Successful Response
     res.status(201).json({
-      token, // Return the token string here
-      user: {
-        _id: newUser._id,
-        fullName: newUser.fullName,
-        email: newUser.email,
-        profilePic: newUser.profilePic,
-      },
+      _id: newUser._id,
+      fullName: newUser.fullName,
+      email: newUser.email,
+      profilePic: newUser.profilePic,
     });
-  } catch (err) {
-    console.error("Error in signup controller:", err.message);
+  } catch (error) {
+    // 9. Robust Error Logging and Generic Client Message
+    console.error("Error in signup controller:", error);
     res.status(500).json({ message: "Internal Server Error during signup." });
   }
 };

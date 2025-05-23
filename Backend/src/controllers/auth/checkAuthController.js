@@ -2,22 +2,28 @@ import User from "../../models/user.model.js";
 
 const checkAuth = async (req, res) => {
   try {
-    // req.user._id should be set by your protectRoute middleware
-    const user = await User.findById(req.user._id).select("-password");
-
-    if (!user) {
-      return res.status(401).json({ message: "User not found or unauthorized" });
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ message: "Authentication failed: User ID not provided in token." });
     }
 
-    // Return user info without password
-    res.status(200).json({
+    const userId = req.user._id;
+
+    const user = await User.findById(userId).select("fullName email profilePic");
+
+    if (!user) {
+      return res.status(401).json({ message: "User not found or unauthorized. Please re-login." });
+    }
+
+    const userData = {
       _id: user._id,
       fullName: user.fullName,
       email: user.email,
       profilePic: user.profilePic,
-    });
+    };
+
+    res.status(200).json(userData);
   } catch (error) {
-    console.error("Error in checkAuth controller:", error.message);
+    console.error("Error in checkAuth controller:", error);
     res.status(500).json({ message: "Internal Server Error during authentication check." });
   }
 };
