@@ -1,4 +1,4 @@
-import User from "../../models/user.js"; // Verify path: user.model.js vs user.js
+import User from "../../models/user.model.js"; // Verify path: user.model.js vs user.js
 import cloudinary from "../../lib/cloudinary.js"; // Verify path
 
 const updateProfile = async (req, res) => {

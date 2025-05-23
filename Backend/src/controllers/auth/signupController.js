@@ -1,5 +1,5 @@
 import { generateToken } from "../../lib/utils.js";
-import User from "../../models/user.js"; // Assuming user.model.js might be renamed to user.js, verify path
+import User from "../../models/user.model.js"; // Assuming user.model.js might be renamed to user.js, verify path
 import bcrypt from "bcryptjs";
 
 const signup = async (req, res) => {
