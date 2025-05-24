@@ -1,7 +1,7 @@
 // src/store/useChatStore.js (hypothetical structure)
 import { create } from 'zustand';
 import axios from 'axios'; // Or your custom axios instance
-import { useAuthStore } from './useAuthStore'; // If you need authUser
+import { useAuthStore } from '../store/useAuthStore'; // If you need authUser
 
 const API_BASE_URL = import.meta.env.MODE === "development"
   ? "http://localhost:5000/api"
