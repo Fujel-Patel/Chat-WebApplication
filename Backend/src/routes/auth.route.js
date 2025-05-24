@@ -9,7 +9,7 @@ import {
   checkAuth,
 } from "../controllers/auth.controller.js";
 
-import protectRoute from "../middleware/protectRoute.js";
+import {protectRoute} from "../middleware/protectRoute.js";
 
 // ✅ Auth Routes
 router.post("/signup", signup);
