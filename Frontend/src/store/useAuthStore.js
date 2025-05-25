@@ -8,7 +8,7 @@ import { io } from "socket.io-client";
 const SOCKET_BASE_URL = import.meta.env.MODE === "development" ? "http://localhost:5000" : "https://chat-webapplication-yf2z.onrender.com";
 
 export const useAuthStore = create((set, get) => ({
-  authUser: null,
+  authUser: JSON.parse(localStorage.getItem("authUser")) || null,
   isSigningUp: false,
   isLoggingIn: false,
   isUpdatingProfile: false,
@@ -22,17 +22,15 @@ export const useAuthStore = create((set, get) => ({
     toast.error(error.response?.data?.message || defaultMessage);
   },
 
-  checkAuth: async () => {
-    set({ isCheckingAuth: true }); // Ensure this is true at the start of the check
+   checkAuth: async () => {
+    set({ isCheckingAuth: true });
     try {
-      const res = await axiosInstance.get("/auth/check"); // Assuming backend sets HTTP-only cookie
+      const res = await axiosInstance.get("/auth/check");
       set({ authUser: res.data });
-      get().connectSocket();
+      localStorage.setItem("authUser", JSON.stringify(res.data)); // Ensure authUser is saved to localStorage
     } catch (error) {
-      // If check fails (e.g., no cookie, invalid cookie), authUser should be null
-      set({ authUser: null });
-      // We don't toast an error here typically, as it's a silent check
-      // console.log("Authentication check failed:", error); // For debugging
+      set({ authUser: null }); // Clear authUser on checkAuth failure
+      localStorage.removeItem("authUser"); // Clear localStorage on checkAuth failure
     } finally {
       set({ isCheckingAuth: false });
     }
@@ -70,14 +68,28 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
-  logout: async () => {
+ logout: async () => {
+    set({ isCheckingAuth: true }); // Optional: set loading state for logout
     try {
-      await axiosInstance.post("/auth/logout"); // Backend should clear cookie
+      // 1. Send logout request to backend (this clears the cookie)
+      const res = await axiosInstance.post("/auth/logout");
+
+      // 2. CRITICAL: Clear authUser state in Zustand
       set({ authUser: null });
-      toast.success("Logged out successfully!");
-      get().disconnectSocket(); // Disconnect socket on logout
+
+      // 3. CRITICAL: Clear authUser from localStorage
+      localStorage.removeItem("authUser");
+
+      // 4. Provide user feedback
+      toast.success(res.data.message || "Logged out successfully!"); // Backend usually sends a message
+
+      return true; // Indicate success
     } catch (error) {
-      get()._handleError(error, "Failed to log out.");
+      // Use your centralized error handler
+      get()._handleError(error, "Logout failed.");
+      return false; // Indicate failure
+    } finally {
+      set({ isCheckingAuth: false }); // Reset loading state
     }
   },
 
