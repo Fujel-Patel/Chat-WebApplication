@@ -84,7 +84,7 @@ export const useAuthStore = create((set, get) => ({
   updateProfile: async (data) => {
     set({ isUpdatingProfile: true });
     try {
-      const res = await axiosInstance.put("/auth/update-profile", data); // Backend updates user, may send new cookie
+      const res = await axiosInstance.put("/auth/updateProfile", data); // Backend updates user, may send new cookie
       set({ authUser: res.data }); // Update authUser with new profile data
       toast.success("Profile updated successfully!");
       return true; // Indicate success
