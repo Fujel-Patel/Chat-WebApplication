@@ -11,7 +11,9 @@ export const signup = async (req, res) => {
     }
 
     if (password.length < 6) {
-      return res.status(400).json({ message: "Password must be at least 6 characters" });
+      return res
+        .status(400)
+        .json({ message: "Password must be at least 6 characters" });
     }
 
     const user = await User.findOne({ email });
@@ -77,7 +79,13 @@ export const login = async (req, res) => {
 
 export const logout = (req, res) => {
   try {
-    res.cookie("jwt", "", { maxAge: 0 });
+    res.cookie("jwt", "", {
+      httpOnly: true, // MUST MATCH: If you set httpOnly: true when setting, include it here.
+      secure: process.env.NODE_ENV !== "development", // MUST MATCH: True in production (HTTPS), false in dev (HTTP).
+      sameSite: "None", // MUST MATCH: If you set SameSite: "None" when setting, include it here.
+      expires: new Date(0), // Set to a date in the past (epoch) to ensure immediate deletion.
+      // This is generally preferred over maxAge: 0 for deletion.
+    });
     res.status(200).json({ message: "Logged out successfully" });
   } catch (error) {
     console.log("Error in logout controller", error.message);
@@ -87,32 +95,83 @@ export const logout = (req, res) => {
 
 export const updateProfile = async (req, res) => {
   try {
-    const { profilePic } = req.body;
-    const userId = req.user._id;
-
-    if (!profilePic) {
-      return res.status(400).json({ message: "Profile pic is required" });
+    if (!req.user || !req.user._id) {
+      return res
+        .status(401)
+        .json({ message: "Unauthorized: User not authenticated." });
     }
 
-    const uploadResponse = await cloudinary.uploader.upload(profilePic);
+    const userId = req.user._id;
+    const { profilePic, fullName } = req.body;
+
+    const updates = {};
+
+    if (profilePic) {
+      if (
+        typeof profilePic !== "string" ||
+        !profilePic.startsWith("data:image/")
+      ) {
+        return res
+          .status(400)
+          .json({
+            message:
+              "Invalid profile picture data. Must be a base64 image string.",
+          });
+      }
+
+      let uploadResponse;
+      try {
+        uploadResponse = await cloudinary.uploader.upload(profilePic);
+        updates.profilePic = uploadResponse.secure_url;
+      } catch (uploadError) {
+        console.error("Cloudinary upload failed:", uploadError);
+        return res
+          .status(500)
+          .json({ message: "Failed to upload profile picture." });
+      }
+    }
+
+    if (fullName) {
+      if (typeof fullName !== "string" || fullName.trim().length === 0) {
+        return res
+          .status(400)
+          .json({ message: "Full name must be a non-empty string." });
+      }
+      updates.fullName = fullName.trim();
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res
+        .status(400)
+        .json({
+          message: "No profile picture or full name provided for update.",
+        });
+    }
+
     const updatedUser = await User.findByIdAndUpdate(
       userId,
-      { profilePic: uploadResponse.secure_url },
-      { new: true }
+      { $set: updates },
+      { new: true, runValidators: true }
     );
+
+    if (!updatedUser) {
+      return res
+        .status(404)
+        .json({ message: "User not found or unable to update." });
+    }
 
     res.status(200).json(updatedUser);
   } catch (error) {
-    console.log("error in update profile:", error);
-    res.status(500).json({ message: "Internal server error" });
+    console.error("Error in updateProfile controller:", error);
+    res.status(500).json({ message: "Internal server error." });
   }
 };
 
 export const checkAuth = (req, res) => {
   try {
-    res.status(200).json({_id: req.user._id,
-        name: req.user.name,
-        email: req.user.email});
+    res
+      .status(200)
+      .json({ _id: req.user._id, name: req.user.name, email: req.user.email });
   } catch (error) {
     console.log("Error in checkAuth controller", error.message);
     res.status(500).json({ message: "Internal Server Error" });
