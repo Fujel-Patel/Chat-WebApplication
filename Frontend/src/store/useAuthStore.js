@@ -97,7 +97,7 @@ export const useAuthStore = create((set, get) => ({
   updateProfile: async (data) => {
     set({ isUpdatingProfile: true });
     try {
-      const res = await axiosInstance.put("/auth/updateProfile", data); // Ensure this matches backend route: "/auth/update-profile" or "/auth/updateProfile"
+      const res = await axiosInstance.put("/auth/update-profile", data); // Ensure this matches backend route: "/auth/update-profile" or "/auth/updateProfile"
       set({ authUser: res.data }); // Update authUser with new profile data
       // FIX: Persist the newly updated authUser data to localStorage
       localStorage.setItem("authUser", JSON.stringify(res.data));

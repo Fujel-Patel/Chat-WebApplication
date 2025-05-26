@@ -18,6 +18,6 @@ router.post("/logout", logout);
 
 // ✅ Authenticated Routes
 router.get("/check", protectRoute, checkAuth);
-router.put("/updateProfile", protectRoute, updateProfile);
+router.put("/update-profile", protectRoute, updateProfile);
 
 export default router;
