@@ -2,7 +2,7 @@ import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
 import { useEffect, useRef } from "react";
 
-import ChatHeader from "./ChatHeader.jsx"
+import ChatHeader from "./ChatHeader.jsx";
 import MessageInput from "./MessageInput.jsx";
 import MessageSkeleton from "./skeletons/MessageSkeleton.jsx";
 import { formatMessageTime } from "../lib/utils";
@@ -12,58 +12,46 @@ const ChatContainer = () => {
     messages,
     getMessages,
     isMessagesLoading,
-    selectedUser, // Ensure selectedUser is correctly pulled from the store
-    subscribeToMessages,
-    unsubscribeFromMessages,
+    selectedUser,
+    addMessageListener, // NEW: pull addMessageListener
+    removeMessageListener, // NEW: pull removeMessageListener
   } = useChatStore();
-  const { authUser } = useAuthStore();
+
+  const { authUser, socket } = useAuthStore(); // Get authUser and socket from useAuthStore
   const messageEndRef = useRef(null);
 
-  // Effect to fetch messages and subscribe to socket events for the selected user
+  // Effect to fetch messages and manage socket listeners for the selected user
   useEffect(() => {
-    // CRITICAL FIX: Only call getMessages and subscribe if a user is actually selected
+    // 1. Fetch messages for the selected user
     if (selectedUser && selectedUser._id) {
       getMessages(selectedUser._id);
-      subscribeToMessages();
     }
 
-    // Cleanup function for socket subscription
+    // 2. Set up/clean up socket listeners for new messages
+    // This effect runs whenever `socket` or `selectedUser` changes.
+    // `addMessageListener` will internally handle `socket.off("newMessage")`
+    // before adding a new one, preventing duplicates.
+    if (socket) { // Only set up listener if socket is available
+      addMessageListener(socket);
+    }
+
+    // Cleanup function for socket listener
     return () => {
-      // Only unsubscribe if a user was selected, to prevent errors on unmount
-      if (selectedUser && selectedUser._id) {
-         unsubscribeFromMessages();
+      // Remove the global 'newMessage' listener when component unmounts or dependencies change
+      if (socket) {
+        removeMessageListener(socket);
       }
     };
-  }, [selectedUser, getMessages, subscribeToMessages, unsubscribeFromMessages]); // Dependency on selectedUser object
+  }, [selectedUser, getMessages, socket, addMessageListener, removeMessageListener]); // Dependencies
 
   // Effect to scroll to the latest message
   useEffect(() => {
-    // Only scroll if messages exist and the ref is attached
     if (messageEndRef.current && messages && messages.length > 0) {
-      // Find the last message element and scroll to it
-      const lastMessageElement = messageEndRef.current.parentElement.lastElementChild;
-      if (lastMessageElement) {
-        lastMessageElement.scrollIntoView({ behavior: "smooth" });
-      }
+      messageEndRef.current.scrollTop = messageEndRef.current.scrollHeight;
     }
-  }, [messages]); // Trigger scroll when messages change
+  }, [messages]);
 
   // --- Initial Render / Loading States ---
-
-  // Show loading skeleton if messages are loading
-  if (isMessagesLoading) {
-    return (
-      <div className="flex-1 flex flex-col overflow-auto">
-        <ChatHeader /> {/* Still show header even when loading */}
-        <MessageSkeleton />
-        {/* MessageInput can be shown or hidden based on preference */}
-        <MessageInput />
-      </div>
-    );
-  }
-
-  // CRITICAL FIX: Show a fallback message if no user is selected
-  // This prevents errors if selectedUser is undefined/null
   if (!selectedUser) {
     return (
       <div className="flex-1 flex items-center justify-center bg-gray-100">
@@ -72,38 +60,47 @@ const ChatContainer = () => {
     );
   }
 
+  if (isMessagesLoading) {
+    return (
+      <div className="flex-1 flex flex-col">
+        <ChatHeader selectedUser={selectedUser} />
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <MessageSkeleton />
+        </div>
+        <MessageInput selectedUser={selectedUser} />
+      </div>
+    );
+  }
+
   // --- Main Chat Display ---
   return (
     <div className="flex-1 flex flex-col overflow-auto">
-      {/* Pass selectedUser to ChatHeader if it needs user info */}
       <ChatHeader selectedUser={selectedUser} />
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4" ref={messageEndRef}>
-        {/* CRITICAL FIX: Only map messages if the array exists and has items */}
         {messages && messages.length > 0 ? (
           messages.map((message) => (
             <div
               key={message._id}
-              className={`chat ${message.senderId === authUser?._id ? "chat-end" : "chat-start"}`}
-              // The ref should ideally be on the last message for auto-scrolling
-              // However, you had it on every message. I've adjusted the scroll effect.
+              className={`chat ${
+                message.senderId === authUser?._id ? "chat-end" : "chat-start"
+              }`}
             >
               <div className="chat-image avatar">
                 <div className="size-10 rounded-full border">
                   <img
                     src={
-                      // Use optional chaining for authUser and selectedUser, though `|| "/avatar.png"` handles most
                       (message.senderId === authUser?._id
                         ? authUser?.profilePic
                         : selectedUser?.profilePic) || "/avatar.png"
                     }
                     alt="profile pic"
+                    className="w-full h-full object-cover rounded-full"
                   />
                 </div>
               </div>
               <div className="chat-header mb-1">
                 <time className="text-xs opacity-50 ml-1">
-                  {/* Defensive call to formatMessageTime */}
                   {formatMessageTime(message.createdAt)}
                 </time>
               </div>
@@ -112,10 +109,9 @@ const ChatContainer = () => {
                   <img
                     src={message.image}
                     alt="Attachment"
-                    className="sm:max-w-[200px] rounded-md mb-2"
+                    className="max-w-full sm:max-w-[200px] rounded-md mb-2"
                   />
                 )}
-                {/* Defensive check for message.text */}
                 {message.text && <p>{message.text}</p>}
               </div>
             </div>
@@ -127,7 +123,6 @@ const ChatContainer = () => {
         )}
       </div>
 
-      {/* Pass selectedUser to MessageInput if it needs the recipient's ID */}
       <MessageInput selectedUser={selectedUser} />
     </div>
   );

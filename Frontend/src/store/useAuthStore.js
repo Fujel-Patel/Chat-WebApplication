@@ -1,140 +1,141 @@
-// src/store/authStore.js
 import { create } from "zustand";
-import { axiosInstance } from "../lib/axios"; // Ensure this path is correct
 import toast from "react-hot-toast";
-import { io } from "socket.io-client";
+import { axiosInstance } from "../lib/axios";
+import { useAuthStore } from "./useAuthStore"; // Auth store to get authUser and the socket instance
 
-// Adjust BASE_URL for socket.io connection if your API and Socket.io are on different paths
-const SOCKET_BASE_URL = import.meta.env.MODE === "development" ? "http://localhost:5000" : "https://chat-webapplication-yf2z.onrender.com";
-
-export const useAuthStore = create((set, get) => ({
-  authUser: JSON.parse(localStorage.getItem("authUser")) || null,
-  isSigningUp: false,
-  isLoggingIn: false,
-  isUpdatingProfile: false,
-  isCheckingAuth: true, // Keep true initially for app startup
-  onlineUsers: [],
-  socket: null, // Holds the socket.io client instance
+export const useChatStore = create((set, get) => ({
+  // States
+  messages: [],
+  users: [],
+  // onlineUsers state will now reside solely in useAuthStore for consistency
+  selectedUser: null,
+  isUsersLoading: false,
+  isMessagesLoading: false,
+  isSendingMessage: false, // For message sending loading state
 
   // Helper function for consistent error toast messages
-  _handleError: (error, defaultMessage = "Something went wrong!") => {
+  _handleError: (error, defaultMessage = "Something went wrong.") => {
     console.error("API Error:", error);
-    toast.error(error.response?.data?.message || defaultMessage);
-  },
-
-  // --- checkAuth action ---
-  // This action correctly fetches user data and saves it to localStorage
-  checkAuth: async () => {
-    set({ isCheckingAuth: true });
-    try {
-      const res = await axiosInstance.get("/auth/check");
-      set({ authUser: res.data });
-      localStorage.setItem("authUser", JSON.stringify(res.data)); // Already correct
-    } catch (error) {
-      set({ authUser: null });
-      localStorage.removeItem("authUser");
-    } finally {
-      set({ isCheckingAuth: false });
+    if (error.response && error.response.data && error.response.data.message) {
+      toast.error(error.response.data.message);
+    } else {
+      toast.error(defaultMessage);
     }
   },
 
-  // --- signup action (FIXED) ---
-  signup: async (data) => {
-    set({ isSigningUp: true });
+  // Actions
+
+  // 1. Get Users List
+  getUsers: async () => {
+    set({ isUsersLoading: true });
     try {
-      const res = await axiosInstance.post("/auth/signup", data); // Backend should set cookie
-      set({ authUser: res.data });
-      // FIX: Persist authUser to localStorage on signup
-      localStorage.setItem("authUser", JSON.stringify(res.data));
-      toast.success("Account created successfully!");
-      get().connectSocket();
-      return true;
+      const res = await axiosInstance.get("/messages/users");
+      set({ users: res.data });
     } catch (error) {
-      get()._handleError(error, "Failed to create account.");
-      return false;
+      get()._handleError(error, "Failed to load users.");
     } finally {
-      set({ isSigningUp: false });
+      set({ isUsersLoading: false });
     }
   },
 
-  // --- login action (FIXED) ---
-  login: async (data) => {
-    set({ isLoggingIn: true });
+  // 2. Get Messages for Selected User
+  getMessages: async (userId) => {
+    set({ isMessagesLoading: true });
     try {
-      const res = await axiosInstance.post("/auth/login", data); // Backend should set cookie
-      set({ authUser: res.data });
-      // FIX: Persist authUser to localStorage on login
-      localStorage.setItem("authUser", JSON.stringify(res.data));
-      toast.success("Logged in successfully!");
-      get().connectSocket();
-      return true;
+      const res = await axiosInstance.get(`/messages/${userId}`);
+      set({ messages: res.data });
     } catch (error) {
-      get()._handleError(error, "Failed to log in. Please check your credentials.");
-      return false;
+      get()._handleError(error, "Failed to load messages.");
     } finally {
-      set({ isLoggingIn: false });
+      set({ isMessagesLoading: false });
     }
   },
 
-  // --- logout action (previously fixed and confirmed working) ---
-  logout: async () => {
-    set({ isCheckingAuth: true });
+  // 3. Send Message (axios call - socket will then emit from backend)
+  sendMessage: async (messageData) => {
+    const { selectedUser, messages } = get();
+    // No need to pull authUser here, as it's typically set by the backend via cookies
+    // when axiosInstance makes the request.
+    // However, for client-side checks, authUser can be pulled from useAuthStore if needed.
+
+    if (!selectedUser?._id) {
+      toast.error("Please select a user to send a message.");
+      return false; // Indicate failure
+    }
+    if (!messageData.text?.trim() && !messageData.image) {
+      toast.error("Message cannot be empty.");
+      return false; // Indicate failure
+    }
+
+    set({ isSendingMessage: true });
     try {
-      const res = await axiosInstance.post("/auth/logout");
-      set({ authUser: null });
-      localStorage.removeItem("authUser");
-      toast.success(res.data.message || "Logged out successfully!");
-      return true;
+      // The backend should handle which message is for which user and emit via socket
+      const res = await axiosInstance.post(
+        `/messages/send/${selectedUser._id}`,
+        messageData
+      );
+
+      // Optimistically update messages array
+      set({ messages: [...messages, res.data] });
+      return true; // Indicate success
     } catch (error) {
-      get()._handleError(error, "Logout failed.");
-      return false;
+      get()._handleError(error, "Failed to send message.");
+      return false; // Indicate failure
     } finally {
-      set({ isCheckingAuth: false });
+      set({ isSendingMessage: false });
     }
   },
 
-  // --- updateProfile action (FIXED) ---
-  updateProfile: async (data) => {
-    set({ isUpdatingProfile: true });
-    try {
-      const res = await axiosInstance.put("/auth/update-profile", data); // Ensure this matches backend route: "/auth/update-profile" or "/auth/updateProfile"
-      set({ authUser: res.data }); // Update authUser with new profile data
-      // FIX: Persist the newly updated authUser data to localStorage
-      localStorage.setItem("authUser", JSON.stringify(res.data));
-      toast.success("Profile updated successfully!");
-      return true;
-    } catch (error) {
-      get()._handleError(error, "Failed to update profile.");
-      return false;
-    } finally {
-      set({ isUpdatingProfile: false });
-    }
-  },
+  // 4. Set Selected User
+  setSelectedUser: (selectedUser) => set({ selectedUser }),
 
-  // --- Socket.io connection logic (no changes here) ---
-  connectSocket: () => {
-    const { authUser } = get();
-    if (!authUser || get().socket?.connected) return;
 
-    const newSocket = io(SOCKET_BASE_URL, {
-      query: { userId: authUser._id },
-      withCredentials: true,
+  // --- Socket Event Handlers (New way of adding/removing listeners) ---
+  // This action will set up the 'newMessage' listener ONLY.
+  // It relies on the socket instance provided by useAuthStore.
+  // This will be called in ChatContainer's useEffect.
+  addMessageListener: (socket) => {
+    if (!socket) return; // Ensure socket exists
+
+    const { selectedUser, messages } = get(); // Get current state when the event fires
+    const authUser = useAuthStore.getState().authUser; // Get authUser from authStore
+
+    // Important: Remove any existing listener before adding a new one
+    // This prevents duplicate event handlers
+    socket.off("newMessage");
+
+    socket.on("newMessage", (newMessage) => {
+      // This listener will always be active.
+      // It needs to check if the message belongs to the currently selected chat.
+      // The logic here is more robust.
+
+      if (!authUser) return; // Should not happen if socket connected after auth
+
+      const isForMe = newMessage.receiverId === authUser._id;
+      const isFromMe = newMessage.senderId === authUser._id;
+
+      // Check if the message is for the currently selected chat
+      // (a message sent by me to selected user OR received by me from selected user)
+      const belongsToSelectedChat =
+        (selectedUser && isForMe && newMessage.senderId === selectedUser._id) ||
+        (selectedUser && isFromMe && newMessage.receiverId === selectedUser._id);
+
+
+      // If the message is for the currently selected chat, add it to messages
+      if (belongsToSelectedChat) {
+        set({ messages: [...messages, newMessage] });
+      } else if (isForMe && !selectedUser) {
+        // Optional: If no chat is selected but a new message arrives for me,
+        // you might want to show a toast notification.
+        // toast(`New message from ${newMessage.senderName || 'someone'}!`);
+      }
     });
-
-    set({ socket: newSocket });
-
-    newSocket.on("connect", () => { console.log("Socket connected:", newSocket.id); });
-    newSocket.on("disconnect", () => { console.log("Socket disconnected"); set({ onlineUsers: [] }); });
-    newSocket.on("getOnlineUsers", (userIds) => { set({ onlineUsers: userIds }); });
-    newSocket.on("connect_error", (error) => { console.error("Socket connection error:", error.message); });
   },
 
-  disconnectSocket: () => {
-    const { socket } = get();
-    if (socket && socket.connected) {
-      socket.disconnect();
-      set({ socket: null, onlineUsers: [] });
-      console.log("Socket disconnected successfully.");
+  // This action removes the 'newMessage' listener
+  removeMessageListener: (socket) => {
+    if (socket) {
+      socket.off("newMessage");
     }
   },
 }));
