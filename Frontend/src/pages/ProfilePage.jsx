@@ -5,8 +5,7 @@ import toast from "react-hot-toast";
 
 function ProfilePage() {
   const { authUser, isUpdatingProfile, updateProfile, isCheckingAuth } = useAuthStore();
-  console.log("isUpdatingProfile:", isUpdatingProfile); // <--- Yahan add karein
-  console.log("Current fullName state:", fullName);
+
   // FIX 1: Initialize fullName state directly from authUser's fullName
   // This ensures the input field has the correct value on the very first render
   // if authUser is already loaded (e.g., from localStorage by Zustand).
