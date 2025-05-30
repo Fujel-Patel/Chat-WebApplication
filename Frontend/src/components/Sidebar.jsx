@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
 import SidebarSkeleton from "./skeletons/SidebarSkeleton";
-import { Users } from "lucide-react";
+import { Users, Search } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 const Sidebar = () => {
   const getUsers = useChatStore((state) => state.getUsers);
@@ -14,6 +15,7 @@ const Sidebar = () => {
   const onlineUsers = useAuthStore((state) => state.onlineUsers) || [];
   const authUser = useAuthStore((state) => state.authUser);
 
+  const [searchTerm, setSearchTerm] = useState("");
   const [showOnlineOnly, setShowOnlineOnly] = useState(false);
 
   useEffect(() => {
@@ -21,39 +23,70 @@ const Sidebar = () => {
   }, [getUsers]);
 
   useEffect(() => {
-    // Auto-select first user once users are loaded
-    // Ensure `users` is an array and not empty before trying to select
     if (!selectedUser && users && users.length > 0) {
-      const usersToConsider = showOnlineOnly
-        ? users.filter((u) => onlineUsers.includes(u._id))
-        : users;
-
-      const firstUser = usersToConsider.length > 0 ? usersToConsider[0] : null;
-
-      if (firstUser) {
-        setSelectedUser(firstUser);
+      const visible = filteredUsers();
+      if (visible.length > 0) {
+        setSelectedUser(visible[0]);
       }
     }
-  }, [users, showOnlineOnly, selectedUser, setSelectedUser, onlineUsers]);
+  }, [users, selectedUser, showOnlineOnly, searchTerm]);
 
-  // Ensure `users` is an array before filtering
-  const filteredUsers = showOnlineOnly
-    ? (users || []).filter((user) => onlineUsers.includes(user._id))
-    : (users || []); // Ensure `users` is treated as an empty array if null/undefined
+  const filteredUsers = () => {
+    let filtered = users || [];
+
+    if (showOnlineOnly) {
+      filtered = filtered.filter((u) => onlineUsers.includes(u._id));
+    }
+
+    if (searchTerm.trim() !== "") {
+      filtered = filtered.filter((u) =>
+        (u.fullName || u.username || "")
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase())
+      );
+    }
+
+    return filtered;
+  };
+
+  const groupedUsers = () => {
+    const online = [];
+    const offline = [];
+
+    filteredUsers().forEach((user) => {
+      if (onlineUsers.includes(user._id)) online.push(user);
+      else offline.push(user);
+    });
+
+    return { online, offline };
+  };
+
+  const { online, offline } = groupedUsers();
 
   if (isUsersLoading) return <SidebarSkeleton />;
 
-  // Defensive check for authUser before calculating onlineCount
-  const onlineCount = Math.max(onlineUsers.length - (authUser ? 1 : 0), 0);
-
   return (
     <aside className="h-full w-20 lg:w-72 border-r border-base-300 flex flex-col transition-all duration-200">
+      {/* Header */}
       <div className="sticky top-0 z-10 bg-base-100 border-b border-base-300 w-full p-5">
         <div className="flex items-center gap-2">
           <Users className="size-6" />
           <span className="font-medium hidden lg:block">Contacts</span>
         </div>
 
+        {/* Search */}
+        <div className="mt-4 hidden lg:flex items-center gap-2">
+          <Search className="size-4 text-zinc-400" />
+          <input
+            type="text"
+            placeholder="Search"
+            className="input input-sm w-full input-bordered"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+
+        {/* Toggle */}
         <div className="mt-3 hidden lg:flex items-center gap-2">
           <label className="cursor-pointer flex items-center gap-2">
             <input
@@ -64,70 +97,73 @@ const Sidebar = () => {
             />
             <span className="text-sm">Show online only</span>
           </label>
-          <span className="text-xs text-zinc-500">({onlineCount} online)</span>
+          <span className="text-xs text-zinc-500">
+            ({Math.max(online.length - 1, 0)} online)
+          </span>
         </div>
       </div>
 
-      <div className="overflow-y-auto w-full py-3 space-y-1">
-        {filteredUsers.length > 0 ? ( // Check if there are users to display
-          filteredUsers.map((user) => {
-            const isSelected = selectedUser?._id === user._id;
-            const isOnline = onlineUsers.includes(user._id);
+      {/* User List */}
+      <div className="overflow-y-auto w-full py-3 space-y-4 px-2">
+        {[["Online", online], ["Offline", offline]].map(([label, list]) =>
+          list.length > 0 ? (
+            <div key={label}>
+              <p className="text-xs text-zinc-400 uppercase font-semibold pl-2 mb-1 hidden lg:block">
+                {label}
+              </p>
+              <AnimatePresence>
+                {list.map((user) => {
+                  const isSelected = selectedUser?._id === user._id;
+                  const isOnline = onlineUsers.includes(user._id);
+                  const initials =
+                    user.fullName?.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2) ||
+                    user.username?.charAt(0).toUpperCase() ||
+                    "?";
 
-            // FIX: Defensive check for user.fullName before splitting
-            const initials =
-              typeof user.fullName === "string" && user.fullName.length > 0
-                ? user.fullName
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")
-                    .toUpperCase()
-                    .slice(0, 2)
-                : user.username // Fallback to username or first letter of _id
-                ? user.username.charAt(0).toUpperCase()
-                : ""; // Fallback to empty string if no suitable name
+                  return (
+                    <motion.button
+                      key={user._id}
+                      layout
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      transition={{ duration: 0.2 }}
+                      onClick={() => setSelectedUser(user)}
+                      className={`
+                        w-full px-3 py-2 flex items-center gap-3 rounded-lg transition-all
+                        hover:bg-base-300
+                        ${isSelected ? "bg-base-300 ring-2 ring-base-300" : ""}
+                      `}
+                    >
+                      <div className="relative">
+                        {user.profilePic ? (
+                          <img
+                            src={user.profilePic}
+                            alt={user.fullName || "User"}
+                            className="size-10 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="size-10 bg-base-300 flex items-center justify-center rounded-full text-sm font-semibold">
+                            {initials}
+                          </div>
+                        )}
+                        {isOnline && (
+                          <span className="absolute bottom-0 right-0 size-3 bg-green-500 rounded-full ring-2 ring-zinc-900" />
+                        )}
+                      </div>
 
-            return (
-              <button
-                key={user._id}
-                onClick={() => setSelectedUser(user)}
-                className={`
-                  w-full px-4 py-3 flex items-center gap-3 transition-all rounded-lg
-                  hover:bg-base-300
-                  ${isSelected ? "bg-base-300 ring-2 ring-base-300" : ""}
-                `}
-              >
-                <div className="relative flex-shrink-0">
-                  {user.profilePic ? (
-                    <img
-                      src={user.profilePic}
-                      alt={user.fullName || user.username || "User"} // Add alt text fallback
-                      className="size-12 object-cover rounded-full"
-                    />
-                  ) : (
-                    <div className="size-12 bg-base-300 text-sm font-semibold flex items-center justify-center rounded-full">
-                      {initials}
-                    </div>
-                  )}
-                  {isOnline && (
-                    <span className="absolute bottom-0 right-0 size-3 bg-green-500 rounded-full ring-2 ring-zinc-900" />
-                  )}
-                </div>
-
-                <div className="hidden lg:block text-left min-w-0">
-                  {/* Defensive check for user.fullName */}
-                  <div className="font-medium truncate">
-                    {user.fullName || user.username || "Unknown User"}
-                  </div>
-                  <div className="text-sm text-zinc-400">
-                    {isOnline ? "Online" : "Offline"}
-                  </div>
-                </div>
-              </button>
-            );
-          })
-        ) : (
-          <div className="text-center text-zinc-500 py-4">No users found</div>
+                      <div className="hidden lg:block text-left min-w-0">
+                        <p className="truncate font-medium">
+                          {user.fullName || user.username || "Unknown"}
+                        </p>
+                        <p className="text-xs text-zinc-500">{isOnline ? "Online" : "Offline"}</p>
+                      </div>
+                    </motion.button>
+                  );
+                })}
+              </AnimatePresence>
+            </div>
+          ) : null
         )}
       </div>
     </aside>
