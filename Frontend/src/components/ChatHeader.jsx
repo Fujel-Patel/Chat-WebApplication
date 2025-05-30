@@ -30,7 +30,7 @@ const ChatHeader = () => {
               {/* Use optional chaining or fallback for profilePic and alt text */}
               <img
                 src={selectedUser.profilePic || "/avatar.png"}
-                alt={selectedUser.fullName || selectedUser.username || "User Profile"}
+                alt={"User"}
               />
             </div>
           </div>
