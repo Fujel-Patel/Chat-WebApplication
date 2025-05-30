@@ -30,12 +30,10 @@ const allowedOrigins = [
 
 app.use(
   cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) {
+    origin: function (origin, callback){
+      if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        console.warn(`CORS blocked request from unknown origin: ${origin}`);
         callback(new Error(`Not allowed by CORS: ${origin}`), false);
       }
     },
@@ -58,7 +56,7 @@ app.get("/", (req, res) => {
     api_version: "1.0",
   });
 });
-
+app.options('*', cors()); // optional: support preflight requests
 // Serve frontend (React build) from "frontend/dist"
 app.use(express.static(path.resolve(__dirname, '..', '..', 'frontend', 'dist')));
 

@@ -13,7 +13,14 @@ const allowedOrigins = [
 
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins,
+    origin: (origin, callback)=>{
+      if(!origin || allowedOrigins.includes(origin)){
+        callback(null, true);
+      }
+      else{
+        callback(new Error(`Not allowed by cors: ${origin}`))
+      }
+    },
     credentials: true,
     methods: ["GET", "POST"], // Allowed methods
   },
