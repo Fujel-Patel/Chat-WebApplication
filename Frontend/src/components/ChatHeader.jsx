@@ -6,6 +6,16 @@ const ChatHeader = () => {
   const { selectedUser, setSelectedUser } = useChatStore();
   const { onlineUsers } = useAuthStore();
 
+  const initials =
+    selectedUser.fullName
+      ?.split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2) ||
+    user.username?.charAt(0).toUpperCase() ||
+    "?";
+
   // CRITICAL FIX: Render nothing or a placeholder if no user is selected
   // This prevents accessing properties of `undefined` or `null`
   if (!selectedUser) {
@@ -28,17 +38,26 @@ const ChatHeader = () => {
           <div className="avatar">
             <div className="size-10 rounded-full relative">
               {/* Use optional chaining or fallback for profilePic and alt text */}
-              <img
-                src={selectedUser.profilePic || "/avatar.png"}
-                alt={"User"}
-              />
+              {selectedUser.profilePic ? (
+                <img
+                  src={selectedUser.profilePic || "/avatar.png"}
+                  alt={"User"}
+                  className="size-10 rounded-full object-cover"
+                />
+              ) : (
+                <div className="size-10 bg-base-300 flex items-center justify-center rounded-full text-sm font-semibold">
+                  {initials}
+                </div>
+              )}
             </div>
           </div>
 
           {/* User info */}
           <div>
             {/* Defensive check for fullName */}
-            <h3 className="font-medium">{selectedUser.fullName || selectedUser.username || "Unknown User"}</h3>
+            <h3 className="font-medium">
+              {selectedUser.fullName || selectedUser.username || "Unknown User"}
+            </h3>
             <p className="text-sm text-base-content/70">
               {isUserOnline ? "Online" : "Offline"}
             </p>
@@ -47,7 +66,10 @@ const ChatHeader = () => {
 
         {/* Close button */}
         {/* Only show if a user is selected */}
-        <button onClick={() => setSelectedUser(null)} className="btn btn-ghost btn-circle btn-sm">
+        <button
+          onClick={() => setSelectedUser(null)}
+          className="btn btn-ghost btn-circle btn-sm"
+        >
           <X size={20} />
         </button>
       </div>

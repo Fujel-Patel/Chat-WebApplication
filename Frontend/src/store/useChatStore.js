@@ -1,18 +1,16 @@
 import { create } from "zustand";
 import toast from "react-hot-toast";
 import { axiosInstance } from "../lib/axios";
-import { useAuthStore } from "./useAuthStore"; // Auth store to get authUser and the socket instance
+import { useAuthStore } from "./useAuthStore";
 
 export const useChatStore = create((set, get) => ({
-  // States
   messages: [],
   users: [],
   selectedUser: null,
   isUsersLoading: false,
   isMessagesLoading: false,
-  isSendingMessage: false, // For message sending loading state
+  isSendingMessage: false,
 
-  // Helper function for consistent error toast messages
   _handleError: (error, defaultMessage = "Something went wrong.") => {
     console.error("API Error:", error);
     if (error.response && error.response.data && error.response.data.message) {
@@ -22,9 +20,6 @@ export const useChatStore = create((set, get) => ({
     }
   },
 
-  // Actions
-
-  // 1. Get Users List
   getUsers: async () => {
     set({ isUsersLoading: true });
     try {
@@ -37,7 +32,6 @@ export const useChatStore = create((set, get) => ({
     }
   },
 
-  // 2. Get Messages for Selected User
   getMessages: async (userId) => {
     set({ isMessagesLoading: true });
     try {
@@ -50,17 +44,16 @@ export const useChatStore = create((set, get) => ({
     }
   },
 
-  // 3. Send Message (axios call - socket will then emit from backend)
   sendMessage: async (messageData) => {
     const { selectedUser, messages } = get();
 
     if (!selectedUser?._id) {
-        toast.error("Please select a user to send a message.");
-        return false; // Indicate failure
+      toast.error("Please select a user to send a message.");
+      return false;
     }
     if (!messageData.text?.trim() && !messageData.image) {
-        toast.error("Message cannot be empty.");
-        return false; // Indicate failure
+      toast.error("Message cannot be empty.");
+      return false;
     }
 
     set({ isSendingMessage: true });
@@ -69,63 +62,47 @@ export const useChatStore = create((set, get) => ({
         `/messages/send/${selectedUser._id}`,
         messageData
       );
-
-      // Optimistically update messages array
       set({ messages: [...messages, res.data] });
-      return true; // Indicate success
+      return true;
     } catch (error) {
       get()._handleError(error, "Failed to send message.");
-      return false; // Indicate failure
+      return false;
     } finally {
       set({ isSendingMessage: false });
     }
   },
 
-  // 4. Set Selected User
-  setSelectedUser: (selectedUser) => set({ selectedUser }),
+  setSelectedUser: (selectedUser) => {
+    set({ selectedUser });
+    if (!selectedUser) {
+      set({ messages: [] });
+    }
+  },
 
-
-  // --- Socket Event Handlers (NEW: Proper way to add/remove listeners) ---
-  // This action will set up the 'newMessage' listener ONLY.
-  // It relies on the socket instance provided by useAuthStore.
-  // This will be called in ChatContainer's useEffect.
   addMessageListener: (socket) => {
-    if (!socket) return; // Ensure socket exists
+    if (!socket) return;
 
-    const { selectedUser } = get(); // Get current selected user when event fires
-    const authUser = useAuthStore.getState().authUser; // Get authUser from authStore
+    const { selectedUser } = get();
+    const authUser = useAuthStore.getState().authUser;
 
-    // Important: Remove any existing listener before adding a new one
-    // This prevents duplicate event handlers
-    socket.off("newMessage"); // Remove previous listener before adding new one
+    socket.off("newMessage");
 
     socket.on("newMessage", (newMessage) => {
-      // This listener will always be active.
-      // It needs to check if the message belongs to the currently selected chat.
-      if (!authUser) return; // Should not happen if socket connected after auth
+      if (!authUser) return;
 
       const isForMe = newMessage.receiverId === authUser._id;
       const isFromMe = newMessage.senderId === authUser._id;
 
-      // Check if the message is for the currently selected chat
-      // (a message sent by me to selected user OR received by me from selected user)
       const belongsToSelectedChat =
         (selectedUser && isForMe && newMessage.senderId === selectedUser._id) ||
         (selectedUser && isFromMe && newMessage.receiverId === selectedUser._id);
 
-
-      // If the message is for the currently selected chat, add it to messages
       if (belongsToSelectedChat) {
-        set((state) => ({ messages: [...state.messages, newMessage] })); // Use functional update for messages
-      } else if (isForMe && !selectedUser) {
-        // Optional: If no chat is selected but a new message arrives for me,
-        // you might want to show a toast notification.
-        // toast(`New message from ${newMessage.senderName || 'someone'}!`);
+        set((state) => ({ messages: [...state.messages, newMessage] }));
       }
     });
   },
 
-  // This action removes the 'newMessage' listener
   removeMessageListener: (socket) => {
     if (socket) {
       socket.off("newMessage");

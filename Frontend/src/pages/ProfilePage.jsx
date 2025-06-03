@@ -6,21 +6,19 @@ import toast from "react-hot-toast";
 function ProfilePage() {
   const { authUser, isUpdatingProfile, updateProfile, isCheckingAuth } = useAuthStore();
 
-  // FIX 1: Initialize fullName state directly from authUser's fullName
-  // This ensures the input field has the correct value on the very first render
-  // if authUser is already loaded (e.g., from localStorage by Zustand).
-  const [fullName, setFullName] = useState(authUser?.fullName || "");
+  // Initialize fullName state to an empty string.
+  // The value will be set by the useEffect below when authUser loads.
+  const [fullName, setFullName] = useState("");
   const [selectedImg, setSelectedImg] = useState(null);
 
-  // FIX 2: Refined useEffect to handle changes to authUser *after* initial render
-  // This also ensures that if authUser's fullName changes (e.g., after an update),
-  // the local fullName state is synced, without causing infinite loops.
+  // FIXED: This useEffect will set the fullName when authUser data is available
+  // or when authUser is updated in the store (e.g., after a successful profile update).
+  // It only depends on 'authUser', preventing overwrites during user typing.
   useEffect(() => {
-    // Only update if authUser.fullName exists AND it's different from the current local fullName state
-    if (authUser?.fullName && authUser.fullName !== fullName) {
-      setFullName(authUser.fullName);
+    if (authUser) {
+      setFullName(authUser.fullName || ""); // Set to authUser's full name or empty string if not defined
     }
-  }, [authUser, fullName]); // Dependencies: authUser (for new data) and fullName (for comparison)
+  }, [authUser]); // Only re-run when the 'authUser' object itself changes.
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];

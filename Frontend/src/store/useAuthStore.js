@@ -1,35 +1,33 @@
-// src/store/authStore.js
 import { create } from "zustand";
-import { axiosInstance } from "../lib/axios"; // Ensure this path is correct
+import { axiosInstance } from "../lib/axios";
 import toast from "react-hot-toast";
 import { io } from "socket.io-client";
 
-// Adjust BASE_URL for socket.io connection if your API and Socket.io are on different paths
-const SOCKET_BASE_URL = import.meta.env.MODE === "development" ? "http://localhost:5000" : "https://chat-webapplication-yf2z.onrender.com";
+const SOCKET_BASE_URL =
+  import.meta.env.MODE === "development"
+    ? "http://localhost:5000"
+    : "https://chat-webapplication-yf2z.onrender.com";
 
 export const useAuthStore = create((set, get) => ({
   authUser: JSON.parse(localStorage.getItem("authUser")) || null,
   isSigningUp: false,
   isLoggingIn: false,
   isUpdatingProfile: false,
-  isCheckingAuth: true, // Keep true initially for app startup
+  isCheckingAuth: true,
   onlineUsers: [],
-  socket: null, // Holds the socket.io client instance
+  socket: null,
 
-  // Helper function for consistent error toast messages
   _handleError: (error, defaultMessage = "Something went wrong!") => {
     console.error("API Error:", error);
     toast.error(error.response?.data?.message || defaultMessage);
   },
 
-  // --- checkAuth action ---
-  // This action correctly fetches user data and saves it to localStorage
   checkAuth: async () => {
     set({ isCheckingAuth: true });
     try {
       const res = await axiosInstance.get("/auth/check");
       set({ authUser: res.data });
-      localStorage.setItem("authUser", JSON.stringify(res.data)); // Already correct
+      localStorage.setItem("authUser", JSON.stringify(res.data));
     } catch (error) {
       set({ authUser: null });
       localStorage.removeItem("authUser");
@@ -38,13 +36,11 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
-  // --- signup action (FIXED) ---
   signup: async (data) => {
     set({ isSigningUp: true });
     try {
-      const res = await axiosInstance.post("/auth/signup", data); // Backend should set cookie
+      const res = await axiosInstance.post("/auth/signup", data);
       set({ authUser: res.data });
-      // FIX: Persist authUser to localStorage on signup
       localStorage.setItem("authUser", JSON.stringify(res.data));
       toast.success("Account created successfully!");
       get().connectSocket();
@@ -57,26 +53,26 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
-  // --- login action (FIXED) ---
   login: async (data) => {
     set({ isLoggingIn: true });
     try {
-      const res = await axiosInstance.post("/auth/login", data); // Backend should set cookie
+      const res = await axiosInstance.post("/auth/login", data);
       set({ authUser: res.data });
-      // FIX: Persist authUser to localStorage on login
       localStorage.setItem("authUser", JSON.stringify(res.data));
       toast.success("Logged in successfully!");
       get().connectSocket();
       return true;
     } catch (error) {
-      get()._handleError(error, "Failed to log in. Please check your credentials.");
+      get()._handleError(
+        error,
+        "Failed to log in. Please check your credentials."
+      );
       return false;
     } finally {
       set({ isLoggingIn: false });
     }
   },
 
-  // --- logout action (previously fixed and confirmed working) ---
   logout: async () => {
     set({ isCheckingAuth: true });
     try {
@@ -84,6 +80,7 @@ export const useAuthStore = create((set, get) => ({
       set({ authUser: null });
       localStorage.removeItem("authUser");
       toast.success(res.data.message || "Logged out successfully!");
+      get().disconnectSocket();
       return true;
     } catch (error) {
       get()._handleError(error, "Logout failed.");
@@ -93,13 +90,11 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
-  // --- updateProfile action (FIXED) ---
   updateProfile: async (data) => {
     set({ isUpdatingProfile: true });
     try {
-      const res = await axiosInstance.put("/auth/update-profile", data); // Ensure this matches backend route: "/auth/update-profile" or "/auth/updateProfile"
-      set({ authUser: res.data }); // Update authUser with new profile data
-      // FIX: Persist the newly updated authUser data to localStorage
+      const res = await axiosInstance.put("/auth/update-profile", data);
+      set({ authUser: res.data });
       localStorage.setItem("authUser", JSON.stringify(res.data));
       toast.success("Profile updated successfully!");
       return true;
@@ -111,7 +106,6 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
-  // --- Socket.io connection logic (no changes here) ---
   connectSocket: () => {
     const { authUser } = get();
     if (!authUser || get().socket?.connected) return;
@@ -123,10 +117,19 @@ export const useAuthStore = create((set, get) => ({
 
     set({ socket: newSocket });
 
-    newSocket.on("connect", () => { console.log("Socket connected:", newSocket.id); });
-    newSocket.on("disconnect", () => { console.log("Socket disconnected"); set({ onlineUsers: [] }); });
-    newSocket.on("getOnlineUsers", (userIds) => { set({ onlineUsers: userIds }); });
-    newSocket.on("connect_error", (error) => { console.error("Socket connection error:", error.message); });
+    newSocket.on("connect", () => {
+      console.log("Socket connected:", newSocket.id);
+    });
+    newSocket.on("disconnect", () => {
+      console.log("Socket disconnected");
+      set({ onlineUsers: [] });
+    });
+    newSocket.on("getOnlineUsers", (userIds) => {
+      set({ onlineUsers: userIds });
+    });
+    newSocket.on("connect_error", (error) => {
+      console.error("Socket connection error:", error.message);
+    });
   },
 
   disconnectSocket: () => {
