@@ -14,9 +14,17 @@ import { useThemeStore } from "./store/useThemeStore";
 
 const App = () => {
   const { authUser, isCheckingAuth, connectSocket } = useAuthStore();
-  const { theme } = useThemeStore();
+  const { theme, setTheme } = useThemeStore();
   const checkAuth = useAuthStore((state) => state.checkAuth);
 
+  useEffect(() => {
+    setTheme("business");
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
+  
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
