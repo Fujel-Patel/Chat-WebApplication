@@ -7,19 +7,56 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
+node_modules/
+
+# Build outputs
 dist
 dist-ssr
+build
 *.local
 
-# Editor directories and files
+# Environment variables (SENSITIVE - DO NOT TRACK)
+.env
+.env.local
+.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea
-.DS_Store
+.idea/
+*.sublime-workspace
+*.sublime-project
+*.swp
+*.swo
+*.sw?
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
-*.sw?
-.env
+
+# OS specific files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Testing
+coverage/
+.nyc_output/
+
+# Temp files
+tmp/
+temp/
+*.tmp
+
+# Package manager lock files (optional - can include if you want consistent installs)
+# package-lock.json
+# pnpm-lock.yaml
+
+# Copilot workspace instructions
+.github

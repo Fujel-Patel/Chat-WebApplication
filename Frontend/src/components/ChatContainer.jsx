@@ -6,6 +6,7 @@ import ChatHeader from "./ChatHeader.jsx";
 import MessageInput from "./MessageInput.jsx";
 import MessageSkeleton from "./skeletons/MessageSkeleton.jsx";
 import { formatMessageTime } from "../lib/utils";
+import { Check, CheckCheck } from "lucide-react";
 
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -17,6 +18,7 @@ const ChatContainer = () => {
     selectedUser,
     addMessageListener,
     removeMessageListener,
+    markMessagesAsRead,
   } = useChatStore();
 
   const { authUser, socket } = useAuthStore();
@@ -30,6 +32,8 @@ const ChatContainer = () => {
   useEffect(() => {
     if (selectedUser && selectedUser._id) {
       getMessages(selectedUser._id);
+      // Mark messages as read when opening the chat
+      markMessagesAsRead(selectedUser._id);
     }
 
     if (socket) {
@@ -47,6 +51,7 @@ const ChatContainer = () => {
     socket,
     addMessageListener,
     removeMessageListener,
+    markMessagesAsRead,
   ]);
 
   useEffect(() => {
@@ -159,7 +164,22 @@ const ChatContainer = () => {
                       </div>
                       // --- END MODIFIED ---
                     )}
-                    {message.text && <p>{message.text}</p>}
+                    <div className="flex items-end gap-2">
+                      <p>{message.text}</p>
+                      {isOwn && (
+                        <div className="text-xs opacity-70 flex items-center gap-0.5">
+                          {message.status === "read" && (
+                            <CheckCheck className="w-4 h-4 text-blue-500" />
+                          )}
+                          {message.status === "delivered" && (
+                            <CheckCheck className="w-4 h-4 text-gray-400" />
+                          )}
+                          {message.status === "sent" && (
+                            <Check className="w-4 h-4 text-gray-400" />
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </motion.div>
               );
