@@ -106,28 +106,31 @@ export const updateProfile = async (req, res) => {
 
     const updates = {};
 
-    if (profilePic) {
-      if (
-        typeof profilePic !== "string" ||
-        !profilePic.startsWith("data:image/")
+    // Handle profilePic: check if it was explicitly provided in the request
+    if (req.body.hasOwnProperty("profilePic")) {
+      if (profilePic === null) {
+        // Remove profile picture
+        updates.profilePic = null;
+      } else if (
+        typeof profilePic === "string" &&
+        profilePic.startsWith("data:image/")
       ) {
-        return res
-          .status(400)
-          .json({
-            message:
-              "Invalid profile picture data. Must be a base64 image string.",
-          });
-      }
-
-      let uploadResponse;
-      try {
-        uploadResponse = await cloudinary.uploader.upload(profilePic);
-        updates.profilePic = uploadResponse.secure_url;
-      } catch (uploadError) {
-        console.error("Cloudinary upload failed:", uploadError);
-        return res
-          .status(500)
-          .json({ message: "Failed to upload profile picture." });
+        // Upload new profile picture
+        let uploadResponse;
+        try {
+          uploadResponse = await cloudinary.uploader.upload(profilePic);
+          updates.profilePic = uploadResponse.secure_url;
+        } catch (uploadError) {
+          console.error("Cloudinary upload failed:", uploadError);
+          return res
+            .status(500)
+            .json({ message: "Failed to upload profile picture." });
+        }
+      } else {
+        return res.status(400).json({
+          message:
+            "Invalid profile picture data. Must be a base64 image string or null to remove.",
+        });
       }
     }
 

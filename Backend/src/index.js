@@ -21,12 +21,10 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser());
 
-const allowedOrigins = [
-  "https://chat-web-application-eqt3.vercel.app",
-  "https://chat-web-application-eqt3-2hetdbyns-fujel-patels-projects.vercel.app",
-  "http://localhost:5173",
-  "http://localhost:3000",
-];
+// Parse CORS_ORIGINS from environment variable
+const allowedOrigins = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(",").map(origin => origin.trim())
+  : ["http://localhost:5173", "http://localhost:3000"];
 
 app.use(
   cors({

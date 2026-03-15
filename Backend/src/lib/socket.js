@@ -1,15 +1,15 @@
 import { Server } from "socket.io";
 import http from "http";
 import express from "express";
+import "dotenv/config";
+
 const app = express();
 const server = http.createServer(app);
 
-const allowedOrigins = [
-  "https://chat-web-application-eqt3.vercel.app",
-  "https://chat-web-application-eqt3-2hetdbyns-fujel-patels-projects.vercel.app",
-  "http://localhost:5173",
-  "http://localhost:3000",
-];
+// Parse CORS_ORIGINS from environment variable
+const allowedOrigins = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(",").map(origin => origin.trim())
+  : ["http://localhost:5173", "http://localhost:3000"];
 
 const io = new Server(server, {
   cors: {

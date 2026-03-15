@@ -1,0 +1,13 @@
+{
+  "testEnvironment": "node",
+  "testMatch": ["**/__tests__/**/*.test.js", "**/?(*.)+(spec|test).js"],
+  "collectCoverageFrom": [
+    "src/**/*.js",
+    "!src/index.js",
+    "!src/keepAlive.js",
+    "!src/seeds/**"
+  ],
+  "coveragePathIgnorePatterns": ["/node_modules/"],
+  "transform": {},
+  "extensionsToTreatAsEsm": [".js"]
+}
